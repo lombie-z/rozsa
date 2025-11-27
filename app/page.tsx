@@ -1,18 +1,24 @@
-import React from "react";
-import client from "@/tina/__generated__/client";
-import Layout from "@/components/layout/layout";
-import ClientPage from "./[...urlSegments]/client-page";
+"use client";
 
-export const revalidate = 300;
+import dynamic from "next/dynamic";
 
-export default async function Home() {
-  const data = await client.queries.page({
-    relativePath: `home.mdx`,
-  });
+// Dynamically import the shader scene with SSR disabled since Three.js needs browser APIs
+const ShaderScene = dynamic(() => import("@/components/shader-scene"), {
+  ssr: false,
+});
 
+export default function Home() {
   return (
-    <Layout rawPageData={data}>
-      <ClientPage {...data} />
-    </Layout>
+    <main className="h-screen overflow-y-auto snap-y snap-mandatory">
+      {/* Landing Section - Shader Scene */}
+      <section className="h-screen w-full snap-start snap-always relative">
+        <ShaderScene />
+      </section>
+
+      {/* Second Section - Empty for now */}
+      <section className="h-screen w-full snap-start snap-always bg-[#0a0a0a]">
+        {/* Content goes here */}
+      </section>
+    </main>
   );
 }
