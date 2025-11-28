@@ -29,7 +29,6 @@ const vertexShader = `
 const createFragmentShader = () => `
   uniform float iGlobalTime;
   uniform vec2 iResolution;
-  uniform float uScrollProgress;
   
   const int NUM_STEPS = ${NUM_STEPS};
   const float PI = 3.1415;
@@ -213,9 +212,7 @@ const createFragmentShader = () => `
     vec3 ang = vec3(
       sin(time*3.0)*0.1,sin(time)*0.2+0.3,time
     );    
-    // Adjust camera Y position based on scroll - go deeper as we scroll (decrease Y)
-    float cameraY = 3.5 - uScrollProgress * 8.0;
-    vec3 ori = vec3(0.0, cameraY, time*5.0);
+    vec3 ori = vec3(0.0,3.5,time*5.0);
     vec3 dir = normalize(
       vec3(uv.xy,-2.0)
     );
@@ -242,12 +239,8 @@ const createFragmentShader = () => `
   }
 `;
 
-interface WaterShaderProps {
-  scrollProgress?: number;
-}
-
-export const WaterShader: React.FC<WaterShaderProps> = ({ scrollProgress = 0 }) => {
-  const { size, camera } = useThree();
+export const WaterShader: React.FC = () => {
+  const { size } = useThree();
   const materialRef = useRef<THREE.ShaderMaterial>(null!);
   const timeRef = useRef(0);
 
@@ -255,22 +248,18 @@ export const WaterShader: React.FC<WaterShaderProps> = ({ scrollProgress = 0 }) 
     () => ({
       iGlobalTime: { value: 0 },
       iResolution: { value: new THREE.Vector2(size.width, size.height) },
-      uScrollProgress: { value: scrollProgress || 0 },
     }),
     []
   );
 
   const fragmentShader = useMemo(() => createFragmentShader(), []);
 
-  // Initialize resolution and scroll progress
+  // Initialize resolution
   useEffect(() => {
     if (materialRef.current?.uniforms) {
       materialRef.current.uniforms.iResolution.value.set(size.width, size.height);
-      if (materialRef.current.uniforms.uScrollProgress) {
-        materialRef.current.uniforms.uScrollProgress.value = scrollProgress || 0;
-      }
     }
-  }, [size.width, size.height, scrollProgress]);
+  }, [size.width, size.height]);
 
   useFrame((state, delta) => {
     if (materialRef.current?.uniforms) {
@@ -278,10 +267,6 @@ export const WaterShader: React.FC<WaterShaderProps> = ({ scrollProgress = 0 }) 
       materialRef.current.uniforms.iGlobalTime.value = timeRef.current;
       // Update resolution to match actual canvas pixel size
       materialRef.current.uniforms.iResolution.value.set(state.size.width, state.size.height);
-      // Update scroll progress
-      if (materialRef.current.uniforms.uScrollProgress) {
-        materialRef.current.uniforms.uScrollProgress.value = scrollProgress || 0;
-      }
     }
   });
 
