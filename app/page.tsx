@@ -32,37 +32,19 @@ const allRecords = [
   { artist: "Artist Fourteen", music: "Track Fourteen", albumArt: "https://placehold.co/400x400/450a0a/ffffff?text=Album+14", isSong: false },
 ];
 
-// Split records into pages: 3, 2, 2, 7
-const page1Records = allRecords.slice(0, 3);   // 3 records
-const page2Records = allRecords.slice(3, 5);   // 2 records
-const page3Records = allRecords.slice(5, 7);   // 2 records
-const page4Records = allRecords.slice(7, 14);  // 7 records
+// Split records into pages: landing (1), then 2, 2, 7
+const landingRecord = allRecords[0];            // 1 record for landing
+const page2Records = allRecords.slice(1, 3);   // 2 records (previously page 2)
+const page3Records = allRecords.slice(3, 5);   // 2 records (previously page 3)
+const page4Records = allRecords.slice(5, 12);  // 7 records (previously page 4)
 
 export default function Home() {
   return (
     <main className="h-screen overflow-y-auto snap-y snap-mandatory">
-      {/* Landing Section - Shader Scene */}
-      <section className="h-screen w-full snap-start snap-always relative">
-        <ShaderScene />
-      </section>
-
-      {/* Page 1 - 3 Records with Water Shader */}
-      <section className="h-screen w-full snap-start snap-always bg-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-        <div className="max-w-7xl w-full relative z-10">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-12 lg:gap-16 justify-items-center">
-            {page1Records.map((record, index) => (
-              <MusicArtwork
-                key={index}
-                artist={record.artist}
-                music={record.music}
-                albumArt={record.albumArt}
-                isSong={record.isSong}
-              />
-            ))}
-          </div>
-        </div>
-        {/* Water Shader at bottom */}
-        <div className="absolute bottom-0 left-0 w-full h-1/3 z-0">
+      {/* Landing Section - 1 Album with Full-Height Water Shader */}
+      <section className="h-screen w-full snap-start snap-always bg-linear-to-b from-[#450a0a] to-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        {/* Water Shader - Full Height Background */}
+        <div className="absolute inset-0 w-full h-full z-0">
           <Canvas 
             orthographic
             camera={{ zoom: 1, position: [0, 0, 1], near: 0.1, far: 1000 }}
@@ -74,6 +56,20 @@ export default function Home() {
             <WaterShader />
           </Canvas>
         </div>
+        {/* Single Album - Centered */}
+        <div className="max-w-7xl w-full relative z-10 flex items-center justify-center">
+          <MusicArtwork
+            artist={landingRecord.artist}
+            music={landingRecord.music}
+            albumArt={landingRecord.albumArt}
+            isSong={landingRecord.isSong}
+          />
+        </div>
+      </section>
+
+      {/* Page 1 - ROZSA Shader Scene */}
+      <section className="h-screen w-full snap-start snap-always relative">
+        <ShaderScene />
       </section>
 
       {/* Page 2 - 2 Records */}
