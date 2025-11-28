@@ -29,6 +29,7 @@ const vertexShader = `
 const createFragmentShader = () => `
   uniform float iGlobalTime;
   uniform vec2 iResolution;
+  uniform float u_scrollProgress;
   
   const int NUM_STEPS = ${NUM_STEPS};
   const float PI = 3.1415;
@@ -208,11 +209,17 @@ const createFragmentShader = () => `
     float time = iGlobalTime * 0.3;
     float seaTime = iGlobalTime * SEA_SPEED;
     float epsilonNrm = 0.1 / iResolution.x;
+    
+    // Depth effect: move camera deeper based on scroll progress
+    float depthOffset = u_scrollProgress * 2.5;
+    float darkenFactor = u_scrollProgress * 0.6;
+    
     // ray
     vec3 ang = vec3(
       sin(time*3.0)*0.1,sin(time)*0.2+0.3,time
     );    
-    vec3 ori = vec3(0.0,3.5,time*5.0);
+    // Move camera deeper as we scroll (simulate going underwater)
+    vec3 ori = vec3(0.0, 3.5 - depthOffset, time*5.0 - depthOffset);
     vec3 dir = normalize(
       vec3(uv.xy,-2.0)
     );
@@ -234,12 +241,26 @@ const createFragmentShader = () => `
       getSeaColor(p,n,light,dir,dist),
       pow(smoothstep(0.0,-0.05,dir.y),0.3)
     );
+    
+    // Apply darkening and depth effects based on scroll progress
+    // Darken colors as we go deeper (more black, less red)
+    vec3 deepColor = mix(color, vec3(0.0, 0.0, 0.0), darkenFactor);
+    color = mix(color, deepColor, u_scrollProgress);
+    
+    // Increase fog/attenuation for deeper water appearance
+    float depthFog = 1.0 - exp(-dot(dist,dist) * (0.2 + u_scrollProgress * 0.3));
+    color = mix(color, vec3(0.0, 0.0, 0.0), depthFog * (0.3 + u_scrollProgress * 0.4));
+    
     // post
     gl_FragColor = vec4(pow(color,vec3(0.75)), 1.0);
   }
 `;
 
-export const WaterShader: React.FC = () => {
+interface WaterShaderProps {
+  scrollProgress?: number;
+}
+
+export const WaterShader: React.FC<WaterShaderProps> = ({ scrollProgress = 0 }) => {
   const { size } = useThree();
   const materialRef = useRef<THREE.ShaderMaterial>(null!);
   const timeRef = useRef(0);
@@ -248,6 +269,7 @@ export const WaterShader: React.FC = () => {
     () => ({
       iGlobalTime: { value: 0 },
       iResolution: { value: new THREE.Vector2(size.width, size.height) },
+      u_scrollProgress: { value: 0 },
     }),
     []
   );
@@ -258,13 +280,15 @@ export const WaterShader: React.FC = () => {
   useEffect(() => {
     if (materialRef.current?.uniforms) {
       materialRef.current.uniforms.iResolution.value.set(size.width, size.height);
+      materialRef.current.uniforms.u_scrollProgress.value = scrollProgress;
     }
-  }, [size.width, size.height]);
+  }, [size.width, size.height, scrollProgress]);
 
   useFrame((state, delta) => {
     if (materialRef.current?.uniforms) {
       timeRef.current += delta;
       materialRef.current.uniforms.iGlobalTime.value = timeRef.current;
+      materialRef.current.uniforms.u_scrollProgress.value = scrollProgress;
       // Update resolution to match actual canvas pixel size
       materialRef.current.uniforms.iResolution.value.set(state.size.width, state.size.height);
     }
