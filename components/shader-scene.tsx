@@ -333,11 +333,11 @@ export const ShaderScene: FC = () => {
   }, []);
 
   if (!mounted) {
-    return <div className='absolute inset-0 w-full h-full bg-linear-to-b from-[#450a0a] to-[#0a0a0a]' />;
+    return <div className='absolute inset-0 w-full h-full bg-linear-to-b from-[#120202] to-[#0a0a0a]' />;
   }
 
   return (
-    <div className='absolute inset-0 w-full h-full bg-linear-to-b from-[#450a0a] to-[#0a0a0a]'>
+    <div className='absolute inset-0 w-full h-full bg-linear-to-b from-[#120202] to-[#0a0a0a]'>
       <Canvas
         camera={{
           position: [0, 0, 15],
