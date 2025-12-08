@@ -16,6 +16,11 @@ const WaterShader = dynamic(() => import('@/components/water-shader').then((mod)
   ssr: false,
 });
 
+// Dynamically import the simplified ROZSA text with SSR disabled
+const RozsaTextSimple = dynamic(() => import('@/components/rozsa-text-simple').then((mod) => ({ default: mod.RozsaTextSimple })), {
+  ssr: false,
+});
+
 // Sample record data - replace with your actual data
 const allRecords = [
   { artist: 'Artist One', music: 'Track One', albumArt: 'https://placehold.co/400x400/450a0a/ffffff?text=Album+1', isSong: true },
@@ -88,9 +93,6 @@ export default function Home() {
   }, []);
 
   // Calculate effect values based on scroll progress
-  const albumOpacity = Math.max(0, 1 - scrollProgress * 1.5);
-  const albumY = -scrollProgress * 100;
-  const albumScale = Math.max(0.8, 1 - scrollProgress * 0.2);
   const overlayOpacity = Math.min(0.7, scrollProgress * 0.7);
 
   return (
@@ -100,9 +102,25 @@ export default function Home() {
         ref={landingRef}
         className='h-screen w-full snap-start snap-always bg-linear-to-b from-[#450a0a] to-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden'
       >
+        {/* ROZSA Text - Behind Water Horizon, Above Background */}
+        <div className='absolute inset-0 w-full h-full z-[0.5] pointer-events-none'>
+          <Canvas
+            camera={{
+              position: [0, 0, 15],
+              fov: 50,
+              near: 0.1,
+              far: 2000,
+            }}
+            gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
+            style={{ width: '100%', height: '100%', display: 'block' }}
+          >
+            <RozsaTextSimple />
+          </Canvas>
+        </div>
+
         {/* Water Shader - Full Height Background */}
         <motion.div
-          className='absolute inset-0 w-full h-full z-0'
+          className='absolute inset-0 w-full h-full z-1'
           style={{
             filter: `blur(${scrollProgress * 3}px) brightness(${1 - scrollProgress * 0.3})`,
           }}
@@ -127,18 +145,6 @@ export default function Home() {
             opacity: overlayOpacity,
           }}
         />
-
-        {/* Single Album - Centered */}
-        <motion.div
-          className='max-w-7xl w-full relative z-10 flex items-center justify-center'
-          style={{
-            opacity: albumOpacity,
-            y: albumY,
-            scale: albumScale,
-          }}
-        >
-          <MusicArtwork artist={landingRecord.artist} music={landingRecord.music} albumArt={landingRecord.albumArt} isSong={landingRecord.isSong} />
-        </motion.div>
       </section>
 
       {/* Page 1 - ROZSA Shader Scene */}

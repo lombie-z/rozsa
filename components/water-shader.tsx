@@ -235,11 +235,14 @@ const createFragmentShader = () => `
       seaTime
     );
     vec3 light = normalize(vec3(0.0,1.0,0.8)); 
+    // Calculate how much is sky vs water
+    float seaAmount = pow(smoothstep(0.0,-0.05,dir.y),0.3);
+    
     // color
     vec3 color = mix(
       getSkyColor(dir),
       getSeaColor(p,n,light,dir,dist),
-      pow(smoothstep(0.0,-0.05,dir.y),0.3)
+      seaAmount
     );
     
     // Apply darkening and depth effects based on scroll progress
@@ -251,8 +254,12 @@ const createFragmentShader = () => `
     float depthFog = 1.0 - exp(-dot(dist,dist) * (0.2 + u_scrollProgress * 0.3));
     color = mix(color, vec3(0.0, 0.0, 0.0), depthFog * (0.3 + u_scrollProgress * 0.4));
     
+    // Make sky areas transparent so text shows through
+    // Sky areas (where seaAmount is low) should be more transparent
+    float alpha = mix(0.3, 1.0, seaAmount); // Sky is 30% opaque, water is fully opaque
+    
     // post
-    gl_FragColor = vec4(pow(color,vec3(0.75)), 1.0);
+    gl_FragColor = vec4(pow(color,vec3(0.75)), alpha);
   }
 `;
 
@@ -298,7 +305,7 @@ export const WaterShader: React.FC<WaterShaderProps> = ({ scrollProgress = 0 }) 
   // The vertex shader uses position directly, so we scale to cover screen space
   return (
     <Plane args={[2, 2]} scale={1}>
-      <shaderMaterial ref={materialRef} uniforms={uniforms} vertexShader={vertexShader} fragmentShader={fragmentShader} />
+      <shaderMaterial ref={materialRef} uniforms={uniforms} vertexShader={vertexShader} fragmentShader={fragmentShader} transparent={true} />
     </Plane>
   );
 };
