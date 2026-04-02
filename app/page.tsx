@@ -118,7 +118,7 @@ export default function Home() {
       {/* Landing Section - 1 Album with Full-Height Water Shader */}
       <section
         ref={landingRef}
-        className='h-[100dvh] w-full snap-start snap-always bg-linear-to-b from-[#450a0a] to-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden'
+        className='h-[100dvh] w-full snap-start snap-always bg-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden'
       >
         {/* Water Shader — fixed to the viewport so it stays in place as the
             snap scroll happens, then fades out as the ROZSA section rises up
