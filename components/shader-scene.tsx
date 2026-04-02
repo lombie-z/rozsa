@@ -348,11 +348,11 @@ export const ShaderScene: FC<ShaderSceneProps> = ({ lowQuality = false }) => {
   const quality = lowQuality ? SHADER_QUALITY.low : SHADER_QUALITY.high;
 
   if (!mounted) {
-    return <div className='absolute inset-0 w-full h-full bg-[#0a0a0a]' />;
+    return <div className='absolute inset-0 w-full h-full bg-black' />;
   }
 
   return (
-    <div className='absolute inset-0 w-full h-full bg-[#0a0a0a]'>
+    <div className='absolute inset-0 w-full h-full bg-black'>
       <Canvas
         camera={{
           position: [0, 0, 15],

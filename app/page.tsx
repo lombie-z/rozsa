@@ -126,11 +126,16 @@ export default function Home() {
             Falls back to position: absolute for prefers-reduced-motion so
             the water just scrolls away naturally with the section. */}
         <motion.div
-          className='inset-0 w-full h-full [&>div]:pointer-events-none [&_canvas]:pointer-events-none'
+          className='inset-0 w-full h-full'
           style={{
             position: reducedMotion ? 'absolute' : 'fixed',
             zIndex: 10,
             pointerEvents: 'none',
+            // Hide entirely once transition is complete — opacity:0 alone still lets the
+            // fixed canvas sit in front of the ROZSA section and block pointer events,
+            // because pointer-events:none on a parent does NOT prevent children with
+            // pointer-events:auto (R3F's canvas default) from receiving events.
+            display: scrollProgress >= 1 ? 'none' : undefined,
             opacity: reducedMotion ? 1 : Math.max(0, 1 - scrollProgress),
             filter: `blur(${shaderBlur}px) brightness(${shaderBrightness})`,
           }}
@@ -142,6 +147,17 @@ export default function Home() {
             style={{ width: '100%', height: '100%', display: 'block' }}
             dpr={canvasDpr}
             frameloop='always'
+            onCreated={({ gl }) => {
+              // R3F sets touch-action:none inline on its canvas to handle 3D interactions.
+              // Override both the canvas and its wrapper div so native scroll (wheel +
+              // touch pan) passes through to the scrollable <main> container.
+              gl.domElement.style.pointerEvents = 'none';
+              gl.domElement.style.touchAction = 'auto';
+              if (gl.domElement.parentElement) {
+                gl.domElement.parentElement.style.pointerEvents = 'none';
+                gl.domElement.parentElement.style.touchAction = 'auto';
+              }
+            }}
           >
             <WaterShader scrollProgress={scrollProgress} lowQuality={isMobile} />
           </Canvas>
@@ -170,7 +186,7 @@ export default function Home() {
       </section>
 
       {/* Page 1 - ROZSA Shader Scene */}
-      <section ref={rozsaRef} className='h-[100dvh] w-full snap-start snap-always relative bg-[#0a0a0a]'>
+      <section ref={rozsaRef} className='h-[100dvh] w-full snap-start snap-always relative bg-black'>
         <ShaderScene lowQuality={isMobile} />
       </section>
 
