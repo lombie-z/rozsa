@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
+import { usePlaying } from '@/lib/playing-context';
 
 // Component-specific styles
 const componentStyles = `
@@ -35,6 +36,10 @@ interface MusicArtworkProps {
 }
 
 export default function MusicArtwork({ artist, music, albumArt, isSong, isLoading = false }: MusicArtworkProps) {
+  // Stable ID for this record used to coordinate "one playing at a time"
+  const recordId = `${artist}—${music}`;
+  const { playingId, setPlayingId } = usePlaying();
+
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
   // On touch devices the first tap activates the controls; the second tap plays/pauses
@@ -58,23 +63,36 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
   // Calculate spin duration based on type: songs (0.75 rev/sec) vs albums (0.55 rev/sec)
   const spinDuration = isSong ? 1 / 0.75 : 1 / 0.55; // Convert rev/sec to seconds per revolution
 
+  const captureRotation = () => {
+    if (vinylRef.current) {
+      const transform = window.getComputedStyle(vinylRef.current).transform;
+      if (transform && transform !== 'none') {
+        const matrix = new DOMMatrix(transform);
+        const angle = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
+        setRotation(angle < 0 ? angle + 360 : angle);
+      }
+    }
+  };
+
   const doPlayPause = () => {
     if (isPlaying) {
-      // Pause: capture current rotation
-      if (vinylRef.current) {
-        const computedStyle = window.getComputedStyle(vinylRef.current);
-        const transform = computedStyle.transform;
-        if (transform && transform !== 'none') {
-          const matrix = new DOMMatrix(transform);
-          const angle = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
-          setRotation(angle < 0 ? angle + 360 : angle);
-        }
-      }
+      captureRotation();
+      setPlayingId(null);
     } else {
       startTimeRef.current = Date.now();
+      setPlayingId(recordId);
     }
     setIsPlaying(!isPlaying);
   };
+
+  // Stop this record when another one starts playing
+  useEffect(() => {
+    if (isPlaying && playingId !== recordId) {
+      captureRotation();
+      setIsPlaying(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playingId]);
 
   const handleTap = () => {
     if (isTouchDevice && !isTouched) {
@@ -161,8 +179,8 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
     );
   }
 
-  // Controls are visible on hover (desktop) or after first tap (touch)
-  const showControls = isHovered || isTouched;
+  // Controls visible on hover/touch-active, and vinyl stays out while playing
+  const showControls = isHovered || isTouched || isPlaying;
 
   return (
     <div className='relative'>
@@ -187,9 +205,9 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
 
       {/* Main container */}
       <div className='relative group'>
-        {/* Vinyl record — hidden on mobile to prevent overflow outside the card */}
+        {/* Vinyl record — slides out to the left on hover/play */}
         <div
-          className={`absolute -left-24 top-1/2 -translate-y-1/2 transition-all duration-500 ease-out hidden sm:block ${
+          className={`absolute -left-24 top-1/2 -translate-y-1/2 transition-all duration-500 ease-out ${
             showControls ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-24'
           }`}
         >

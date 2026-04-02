@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { Canvas } from '@react-three/fiber';
 import MusicArtwork from '@/components/record';
 import { useIsMobile, usePrefersReducedMotion } from '@/lib/use-mobile';
+import { PlayingProvider } from '@/lib/playing-context';
 
 // Dynamically import the shader scene with SSR disabled since Three.js needs browser APIs
 const ShaderScene = dynamic(() => import('@/components/shader-scene'), {
@@ -110,8 +111,9 @@ export default function Home() {
   const canvasDpr: [number, number] = isMobile ? [1, 1] : [1, 2];
 
   return (
-    // Use 100dvh (dynamic viewport height) instead of 100vh — fixes iOS Safari where
-    // the browser chrome eats into the viewport, causing content to be cut off.
+    <PlayingProvider>
+    {/* Use 100dvh (dynamic viewport height) instead of 100vh — fixes iOS Safari where
+        the browser chrome eats into the viewport, causing content to be cut off. */}
     <main ref={mainRef} className='h-[100dvh] overflow-y-auto snap-y snap-mandatory'>
       {/* Landing Section - 1 Album with Full-Height Water Shader */}
       <section
@@ -197,5 +199,6 @@ export default function Home() {
         </div>
       </section>
     </main>
+    </PlayingProvider>
   );
 }
