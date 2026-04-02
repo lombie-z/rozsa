@@ -48,9 +48,32 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
   // ~300ms later can be ignored (React 18 registers passive touch listeners so
   // e.preventDefault() inside onTouchEnd cannot suppress the synthetic click).
   const lastTouchTimeRef = useRef<number>(0);
+  // Mirror isPlaying into a ref so the unmount cleanup can read the live value
+  // without being caught in a stale closure.
+  const isPlayingRef = useRef(false);
 
   useEffect(() => {
     setIsTouchDevice(window.matchMedia('(pointer: coarse)').matches);
+  }, []);
+
+  // Keep the ref in sync so unmount cleanup always sees the current value
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
+
+  // On unmount: cancel any running rAF and release the global playing slot
+  // if this record currently holds it, so nothing stays "playing" after the
+  // component is gone (e.g. route navigation, conditional render).
+  useEffect(() => {
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      if (isPlayingRef.current) {
+        setPlayingId(null);
+      }
+    };
+  // setPlayingId is the useState setter from context — guaranteed stable.
+  // recordId is derived from props and won't change for a given instance.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Degrees per ms: ~3.5s per revolution for songs, ~4s for albums
