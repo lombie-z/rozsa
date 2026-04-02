@@ -2,12 +2,12 @@
 import React from 'react';
 import Image from 'next/image';
 import { format } from 'date-fns';
-import { tinaField, useTina } from 'tinacms/dist/react';
-import { TinaMarkdown } from 'tinacms/dist/rich-text';
-import { PostQuery } from '@/tina/__generated__/types';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import type { Post } from '@/lib/types';
 import { useLayout } from '@/components/layout/layout-context';
 import { Section } from '@/components/layout/section';
-import { components } from '@/components/mdx-components';
+import { Mermaid } from '@/components/blocks/mermaid';
 import ErrorBoundary from '@/components/error-boundary';
 
 const titleColorClasses = {
@@ -21,18 +21,8 @@ const titleColorClasses = {
   yellow: 'from-yellow-400 to-yellow-500 dark:from-yellow-300 dark:to-yellow-500',
 };
 
-interface ClientPostProps {
-  data: PostQuery;
-  variables: {
-    relativePath: string;
-  };
-  query: string;
-}
-
-export default function PostClientPage(props: ClientPostProps) {
+export default function PostClientPage({ post }: { post: Post }) {
   const { theme } = useLayout();
-  const { data } = useTina({ ...props });
-  const post = data.post;
 
   const date = new Date(post.date!);
   let formattedDate = '';
@@ -40,21 +30,20 @@ export default function PostClientPage(props: ClientPostProps) {
     formattedDate = format(date, 'MMM dd, yyyy');
   }
 
-  const titleColour = titleColorClasses[theme!.color! as keyof typeof titleColorClasses];
+  const titleColour = titleColorClasses[theme!.color! as keyof typeof titleColorClasses] || titleColorClasses.blue;
 
   return (
     <ErrorBoundary>
       <Section>
-        <h2 data-tina-field={tinaField(post, 'title')} className={`w-full relative\tmb-8 text-6xl font-extrabold tracking-normal text-center title-font`}>
+        <h2 className={`w-full relative\tmb-8 text-6xl font-extrabold tracking-normal text-center title-font`}>
           <span className={`bg-clip-text text-transparent bg-linear-to-r ${titleColour}`}>{post.title}</span>
         </h2>
-        <div data-tina-field={tinaField(post, 'author')} className='flex items-center justify-center mb-16'>
+        <div className='flex items-center justify-center mb-16'>
           {post.author && (
             <>
               {post.author.avatar && (
                 <div className='shrink-0 mr-4'>
                   <Image
-                    data-tina-field={tinaField(post.author, 'avatar')}
                     priority={true}
                     className='h-14 w-14 object-cover rounded-full shadow-xs'
                     src={post.author.avatar}
@@ -64,25 +53,19 @@ export default function PostClientPage(props: ClientPostProps) {
                   />
                 </div>
               )}
-              <p
-                data-tina-field={tinaField(post.author, 'name')}
-                className='text-base font-medium text-gray-600 group-hover:text-gray-800 dark:text-gray-200 dark:group-hover:text-white'
-              >
+              <p className='text-base font-medium text-gray-600 group-hover:text-gray-800 dark:text-gray-200 dark:group-hover:text-white'>
                 {post.author.name}
               </p>
               <span className='font-bold text-gray-200 dark:text-gray-500 mx-2'>—</span>
             </>
           )}
-          <p
-            data-tina-field={tinaField(post, 'date')}
-            className='text-base text-gray-400 group-hover:text-gray-500 dark:text-gray-300 dark:group-hover:text-gray-150'
-          >
+          <p className='text-base text-gray-400 group-hover:text-gray-500 dark:text-gray-300 dark:group-hover:text-gray-150'>
             {formattedDate}
           </p>
         </div>
         {post.heroImg && (
           <div className='px-4 w-full'>
-            <div data-tina-field={tinaField(post, 'heroImg')} className='relative max-w-4xl lg:max-w-5xl mx-auto'>
+            <div className='relative max-w-4xl lg:max-w-5xl mx-auto'>
               <Image
                 priority={true}
                 src={post.heroImg}
@@ -105,13 +88,21 @@ export default function PostClientPage(props: ClientPostProps) {
             </div>
           </div>
         )}
-        <div data-tina-field={tinaField(post, '_body')} className='prose dark:prose-dark w-full max-w-none'>
-          <TinaMarkdown
-            content={post._body}
+        <div className='prose dark:prose-dark w-full max-w-none'>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
             components={{
-              ...components,
+              code({ className, children }) {
+                const lang = /language-(\w+)/.exec(className || '')?.[1];
+                if (lang === 'mermaid') {
+                  return <Mermaid value={String(children).replace(/\n$/, '')} />;
+                }
+                return <code className={className}>{children}</code>;
+              },
             }}
-          />
+          >
+            {post.body}
+          </ReactMarkdown>
         </div>
       </Section>
     </ErrorBoundary>
