@@ -264,7 +264,7 @@ void main() {
 `;
 
 const SceneText: FC<{ animationState: AnimationState; amount: number }> = ({ animationState, amount }) => {
-  const { size } = useThree();
+  const { size, viewport } = useThree();
   const isSmall = size.width < 768;
   const materialRef = useRef<THREE.ShaderMaterial>(null!);
 
@@ -286,7 +286,7 @@ const SceneText: FC<{ animationState: AnimationState; amount: number }> = ({ ani
   });
 
   return (
-    <Text position={[0, 0, 2]} fontSize={isSmall ? 2 : 3.5} anchorX='center' anchorY='middle' letterSpacing={0.1} fontWeight='bold'>
+    <Text position={[0, 0, 2]} fontSize={isSmall ? Math.min(1.6, viewport.width * 0.42) : 3.5} anchorX='center' anchorY='middle' letterSpacing={0.1} fontWeight='bold'>
       ROZSA
       <shaderMaterial
         ref={materialRef}
