@@ -235,13 +235,13 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
       <div className='relative group'>
         {/* Vinyl record — slides out to the left on hover/play.
             Mobile: w-32 (-left-12) to match the w-36 album card.
-            Desktop sm+: w-70 (-left-24) to match the w-64 album card. */}
+            Desktop sm+: w-56 (-left-20) — slightly smaller than the w-64 card. */}
         <div
-          className={`absolute -left-12 sm:-left-24 top-1/2 -translate-y-1/2 transition-all duration-500 ease-out ${
-            showControls ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-12 sm:translate-x-24'
+          className={`absolute -left-12 sm:-left-20 top-1/2 -translate-y-1/2 transition-all duration-500 ease-out ${
+            showControls ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-12 sm:translate-x-20'
           }`}
         >
-          <div className='relative w-32 h-32 sm:w-70 sm:h-70'>
+          <div className='relative w-32 h-32 sm:w-56 sm:h-56'>
             <div
               ref={vinylRef}
               className='w-full h-full'
