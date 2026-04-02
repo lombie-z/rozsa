@@ -46,6 +46,10 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
   const vinylRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const startTimeRef = useRef<number>(0);
+  // Tracks the last touchend timestamp so the ghost click fired by iOS Safari
+  // ~300ms later can be ignored (React 18 registers passive touch listeners so
+  // e.preventDefault() inside onTouchEnd cannot suppress the synthetic click).
+  const lastTouchTimeRef = useRef<number>(0);
 
   useEffect(() => {
     setIsTouchDevice(window.matchMedia('(pointer: coarse)').matches);
@@ -72,7 +76,7 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
     setIsPlaying(!isPlaying);
   };
 
-  const handleClick = () => {
+  const handleTap = () => {
     if (isTouchDevice && !isTouched) {
       // First tap on touch device: reveal controls, don't play yet
       setIsTouched(true);
@@ -82,12 +86,19 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
     doPlayPause();
   };
 
-  // Handle touch explicitly to avoid iOS Safari dropping clicks inside
-  // snap-scroll containers. preventDefault() also cancels the ghost click
-  // that would otherwise fire ~300ms later and double-trigger handleClick.
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    e.preventDefault();
-    handleClick();
+  // On mobile, onTouchEnd is the authoritative handler. We record the time so
+  // the ghost click that iOS/Android fires ~300ms later can be detected and
+  // ignored (React 18 passive listeners mean e.preventDefault() in onTouchEnd
+  // cannot suppress that ghost click).
+  const handleTouchEnd = (_e: React.TouchEvent) => {
+    lastTouchTimeRef.current = performance.now();
+    handleTap();
+  };
+
+  const handleClick = () => {
+    // Drop ghost clicks from touch — anything within 600 ms of the last touchend
+    if (performance.now() - lastTouchTimeRef.current < 600) return;
+    handleTap();
   };
 
   // Dismiss touch-active state when the user taps elsewhere (not on the card itself)
