@@ -5,13 +5,13 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { Plane } from '@react-three/drei';
 import * as THREE from 'three';
 
-const NUM_STEPS = 8;
 const PI = 3.1415;
-const EPSILON = 1e-3;
 
-// sea variables
-const ITER_GEOMETRY = 3;
-const ITER_FRAGMENT = 5;
+// Quality presets — mobile uses halved iteration counts to stay within GPU budget
+const QUALITY = {
+  high: { NUM_STEPS: 8, ITER_GEOMETRY: 3, ITER_FRAGMENT: 5 },
+  low:  { NUM_STEPS: 4, ITER_GEOMETRY: 2, ITER_FRAGMENT: 3 },
+} as const;
 const SEA_HEIGHT = 0.6;
 const SEA_CHOPPY = 1.0;
 const SEA_SPEED = 1.0;
@@ -26,18 +26,20 @@ const vertexShader = `
   }
 `;
 
-const createFragmentShader = () => `
+const createFragmentShader = (lowQuality: boolean) => {
+  const q = lowQuality ? QUALITY.low : QUALITY.high;
+  return `
   uniform float iGlobalTime;
   uniform vec2 iResolution;
   uniform float u_scrollProgress;
-  
-  const int NUM_STEPS = ${NUM_STEPS};
+
+  const int NUM_STEPS = ${q.NUM_STEPS};
   const float PI = 3.1415;
   const float EPSILON = 0.001;
 
   // sea variables
-  const int ITER_GEOMETRY = ${ITER_GEOMETRY};
-  const int ITER_FRAGMENT = ${ITER_FRAGMENT};
+  const int ITER_GEOMETRY = ${q.ITER_GEOMETRY};
+  const int ITER_FRAGMENT = ${q.ITER_FRAGMENT};
   const float SEA_HEIGHT = ${SEA_HEIGHT.toFixed(1)};
   const float SEA_CHOPPY = ${SEA_CHOPPY.toFixed(1)};
   const float SEA_SPEED = ${SEA_SPEED.toFixed(1)};
@@ -255,12 +257,14 @@ const createFragmentShader = () => `
     gl_FragColor = vec4(pow(color,vec3(0.75)), 1.0);
   }
 `;
+};
 
 interface WaterShaderProps {
   scrollProgress?: number;
+  lowQuality?: boolean;
 }
 
-export const WaterShader: React.FC<WaterShaderProps> = ({ scrollProgress = 0 }) => {
+export const WaterShader: React.FC<WaterShaderProps> = ({ scrollProgress = 0, lowQuality = false }) => {
   const { size } = useThree();
   const materialRef = useRef<THREE.ShaderMaterial>(null!);
   const timeRef = useRef(0);
@@ -274,7 +278,7 @@ export const WaterShader: React.FC<WaterShaderProps> = ({ scrollProgress = 0 }) 
     []
   );
 
-  const fragmentShader = useMemo(() => createFragmentShader(), []);
+  const fragmentShader = useMemo(() => createFragmentShader(lowQuality), [lowQuality]);
 
   // Initialize resolution
   useEffect(() => {

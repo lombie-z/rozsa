@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import dynamic from 'next/dynamic';
 import { Canvas } from '@react-three/fiber';
 import MusicArtwork from '@/components/record';
+import { useIsMobile, usePrefersReducedMotion } from '@/lib/use-mobile';
 
 // Dynamically import the shader scene with SSR disabled since Three.js needs browser APIs
 const ShaderScene = dynamic(() => import('@/components/shader-scene'), {
@@ -45,10 +46,19 @@ export default function Home() {
   const landingRef = useRef<HTMLElement>(null);
   const rozsaRef = useRef<HTMLElement>(null);
 
+  const isMobile = useIsMobile();
+  const reducedMotion = usePrefersReducedMotion();
+
   // Calculate scroll progress between landing and ROZSA pages
   const [scrollProgress, setScrollProgress] = useState(0);
 
   useEffect(() => {
+    // When reduced motion is preferred, keep scroll effects frozen
+    if (reducedMotion) {
+      setScrollProgress(0);
+      return;
+    }
+
     const updateScrollProgress = () => {
       if (!mainRef.current || !landingRef.current || !rozsaRef.current) return;
 
@@ -85,26 +95,34 @@ export default function Home() {
         mainRef.current.removeEventListener('scroll', handleScroll);
       }
     };
-  }, []);
+  }, [reducedMotion]);
 
   // Calculate effect values based on scroll progress
-  const albumOpacity = Math.max(0, 1 - scrollProgress * 1.5);
-  const albumY = -scrollProgress * 100;
-  const albumScale = Math.max(0.8, 1 - scrollProgress * 0.2);
-  const overlayOpacity = Math.min(0.7, scrollProgress * 0.7);
+  // When reduced motion is preferred, skip all scroll-driven visual changes
+  const albumOpacity = reducedMotion ? 1 : Math.max(0, 1 - scrollProgress * 1.5);
+  const albumY = reducedMotion ? 0 : -scrollProgress * 100;
+  const albumScale = reducedMotion ? 1 : Math.max(0.8, 1 - scrollProgress * 0.2);
+  const overlayOpacity = reducedMotion ? 0 : Math.min(0.7, scrollProgress * 0.7);
+  const shaderBlur = reducedMotion ? 0 : scrollProgress * 3;
+  const shaderBrightness = reducedMotion ? 1 : 1 - scrollProgress * 0.3;
+
+  // Cap DPR at 1 on mobile to halve GPU fill-rate cost
+  const canvasDpr: [number, number] = isMobile ? [1, 1] : [1, 2];
 
   return (
-    <main ref={mainRef} className='h-screen overflow-y-auto snap-y snap-mandatory'>
+    // Use 100dvh (dynamic viewport height) instead of 100vh — fixes iOS Safari where
+    // the browser chrome eats into the viewport, causing content to be cut off.
+    <main ref={mainRef} className='h-[100dvh] overflow-y-auto snap-y snap-mandatory'>
       {/* Landing Section - 1 Album with Full-Height Water Shader */}
       <section
         ref={landingRef}
-        className='h-screen w-full snap-start snap-always bg-linear-to-b from-[#450a0a] to-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden'
+        className='h-[100dvh] w-full snap-start snap-always bg-linear-to-b from-[#450a0a] to-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden'
       >
         {/* Water Shader - Full Height Background */}
         <motion.div
           className='absolute inset-0 w-full h-full z-0'
           style={{
-            filter: `blur(${scrollProgress * 3}px) brightness(${1 - scrollProgress * 0.3})`,
+            filter: `blur(${shaderBlur}px) brightness(${shaderBrightness})`,
           }}
         >
           <Canvas
@@ -112,10 +130,10 @@ export default function Home() {
             camera={{ zoom: 1, position: [0, 0, 1], near: 0.1, far: 1000 }}
             gl={{ alpha: true, antialias: false, preserveDrawingBuffer: true }}
             style={{ width: '100%', height: '100%', display: 'block' }}
-            dpr={[1, 2]}
+            dpr={canvasDpr}
             frameloop='always'
           >
-            <WaterShader scrollProgress={scrollProgress} />
+            <WaterShader scrollProgress={scrollProgress} lowQuality={isMobile} />
           </Canvas>
         </motion.div>
 
@@ -142,12 +160,12 @@ export default function Home() {
       </section>
 
       {/* Page 1 - ROZSA Shader Scene */}
-      <section ref={rozsaRef} className='h-screen w-full snap-start snap-always relative bg-linear-to-b from-[#120202] to-[#0a0a0a]'>
-        <ShaderScene />
+      <section ref={rozsaRef} className='h-[100dvh] w-full snap-start snap-always relative bg-linear-to-b from-[#120202] to-[#0a0a0a]'>
+        <ShaderScene lowQuality={isMobile} />
       </section>
 
       {/* Page 2 - 2 Records */}
-      <section className='h-screen w-full snap-start snap-always bg-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8'>
+      <section className='h-[100dvh] w-full snap-start snap-always bg-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8'>
         <div className='max-w-7xl w-full'>
           <div className='grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 justify-items-center'>
             {page2Records.map((record, index) => (
@@ -158,7 +176,7 @@ export default function Home() {
       </section>
 
       {/* Page 3 - 2 Records */}
-      <section className='h-screen w-full snap-start snap-always bg-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8'>
+      <section className='h-[100dvh] w-full snap-start snap-always bg-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8'>
         <div className='max-w-7xl w-full'>
           <div className='grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 justify-items-center'>
             {page3Records.map((record, index) => (
@@ -169,9 +187,9 @@ export default function Home() {
       </section>
 
       {/* Page 4 - 7 Records */}
-      <section className='min-h-screen w-full snap-start snap-always bg-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8'>
+      <section className='min-h-[100dvh] w-full snap-start snap-always bg-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8'>
         <div className='max-w-7xl w-full'>
-          <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-12 lg:gap-16 justify-items-center'>
+          <div className='grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-12 lg:gap-16 justify-items-center'>
             {page4Records.map((record, index) => (
               <MusicArtwork key={index} artist={record.artist} music={record.music} albumArt={record.albumArt} isSong={record.isSong} />
             ))}

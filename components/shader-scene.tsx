@@ -5,8 +5,11 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Plane, Text } from '@react-three/drei';
 import * as THREE from 'three';
 
-const MAX_STEPS = 128;
-const PRECISION = 0.0005;
+// Quality presets — mobile uses fewer raymarching steps and blobs to stay within GPU budget
+const SHADER_QUALITY = {
+  high: { MAX_STEPS: 128, PRECISION: 0.0005, AMOUNT: 4 },
+  low:  { MAX_STEPS: 64,  PRECISION: 0.001,  AMOUNT: 2 },
+} as const;
 
 type AnimationState = {
   positions: THREE.Vector3[];
@@ -77,7 +80,7 @@ void main() {
 }
 `;
 
-const createFragmentShader = (amount: number) => `
+const createFragmentShader = (amount: number, maxSteps: number, precision: number) => `
 uniform float u_time;
 uniform float u_aspect;
 uniform vec3 u_positions[${amount}];
@@ -95,7 +98,7 @@ float sdf(vec3 p) {
   vec3 rp = tp;
   rp = rotate(rp, vec3(1.0, 1.0, 0.0), u_rotations[0].x + u_rotations[0].y);
   float final = sdBox(rp, vec3(0.15)) - 0.03;
-  
+
   for(int i = 1; i < MaxCount; i++) {
     tp = p + -u_positions[i] * correct;
     rp = tp;
@@ -118,15 +121,15 @@ vec3 calcNormal(in vec3 p) {
 void main() {
   vec2 centeredUV = (v_uv - 0.5) * vec2(u_aspect, 1.0);
   vec3 ray = normalize(vec3(centeredUV, -1.0));
-  
+
   vec3 camPos = vec3(0.0, 0.0, 2.3);
   vec3 rayPos = camPos;
   float totalDist = 0.0;
   float tMax = 5.0;
 
-  for(int i = 0; i < ${MAX_STEPS}; i++) {
+  for(int i = 0; i < ${maxSteps}; i++) {
     float dist = sdf(rayPos);
-    if (dist < ${PRECISION} || tMax < totalDist) break;
+    if (dist < ${precision} || tMax < totalDist) break;
     totalDist += dist;
     rayPos = camPos + totalDist * ray;
   }
@@ -175,9 +178,11 @@ void main() {
 interface ScreenPlaneProps {
   animationState: AnimationState;
   amount: number;
+  maxSteps: number;
+  precision: number;
 }
 
-const ScreenPlane: FC<ScreenPlaneProps> = ({ animationState, amount }) => {
+const ScreenPlane: FC<ScreenPlaneProps> = ({ animationState, amount, maxSteps, precision }) => {
   const { viewport, size } = useThree();
   const materialRef = useRef<THREE.ShaderMaterial>(null!);
 
@@ -191,7 +196,7 @@ const ScreenPlane: FC<ScreenPlaneProps> = ({ animationState, amount }) => {
     [] // Empty deps - we update via ref
   );
 
-  const fragmentShader = useMemo(() => createFragmentShader(amount), [amount]);
+  const fragmentShader = useMemo(() => createFragmentShader(amount, maxSteps, precision), [amount, maxSteps, precision]);
 
   useFrame((state, delta) => {
     if (materialRef.current) {
@@ -295,14 +300,18 @@ const SceneText: FC<{ animationState: AnimationState; amount: number }> = ({ ani
   );
 };
 
-// Fixed amount to avoid recreating animation state
-const AMOUNT = 4;
+interface SceneProps {
+  amount: number;
+  maxSteps: number;
+  precision: number;
+}
 
-const Scene: FC = () => {
+const Scene: FC<SceneProps> = ({ amount, maxSteps, precision }) => {
   const animationStateRef = useRef<AnimationState | null>(null);
 
-  if (!animationStateRef.current) {
-    animationStateRef.current = createInitialState(AMOUNT);
+  // Re-create animation state only when blob count changes
+  if (!animationStateRef.current || animationStateRef.current.positions.length !== amount) {
+    animationStateRef.current = createInitialState(amount);
   }
 
   const animationState = animationStateRef.current;
@@ -317,20 +326,26 @@ const Scene: FC = () => {
 
   return (
     <>
-      <ScreenPlane animationState={animationState} amount={AMOUNT} />
+      <ScreenPlane animationState={animationState} amount={amount} maxSteps={maxSteps} precision={precision} />
       <Suspense fallback={null}>
-        <SceneText animationState={animationState} amount={AMOUNT} />
+        <SceneText animationState={animationState} amount={amount} />
       </Suspense>
     </>
   );
 };
 
-export const ShaderScene: FC = () => {
+interface ShaderSceneProps {
+  lowQuality?: boolean;
+}
+
+export const ShaderScene: FC<ShaderSceneProps> = ({ lowQuality = false }) => {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const quality = lowQuality ? SHADER_QUALITY.low : SHADER_QUALITY.high;
 
   if (!mounted) {
     return <div className='absolute inset-0 w-full h-full bg-linear-to-b from-[#120202] to-[#0a0a0a]' />;
@@ -347,12 +362,13 @@ export const ShaderScene: FC = () => {
         }}
         gl={{
           alpha: true,
-          antialias: true,
+          antialias: !lowQuality,
           powerPreference: 'high-performance',
         }}
+        dpr={lowQuality ? [1, 1] : [1, 2]}
         style={{ width: '100%', height: '100%' }}
       >
-        <Scene />
+        <Scene amount={quality.AMOUNT} maxSteps={quality.MAX_STEPS} precision={quality.PRECISION} />
       </Canvas>
     </div>
   );
