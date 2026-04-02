@@ -170,7 +170,7 @@ export default function Home() {
       </section>
 
       {/* Page 1 - ROZSA Shader Scene */}
-      <section ref={rozsaRef} className='h-[100dvh] w-full snap-start snap-always relative bg-linear-to-b from-[#120202] to-[#0a0a0a]'>
+      <section ref={rozsaRef} className='h-[100dvh] w-full snap-start snap-always relative bg-[#0a0a0a]'>
         <ShaderScene lowQuality={isMobile} />
       </section>
 
