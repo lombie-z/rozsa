@@ -82,6 +82,14 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
     doPlayPause();
   };
 
+  // Handle touch explicitly to avoid iOS Safari dropping clicks inside
+  // snap-scroll containers. preventDefault() also cancels the ghost click
+  // that would otherwise fire ~300ms later and double-trigger handleClick.
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.preventDefault();
+    handleClick();
+  };
+
   // Dismiss touch-active state when the user taps elsewhere (not on the card itself)
   useEffect(() => {
     if (!isTouched) return;
@@ -200,9 +208,11 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
         <div
           ref={cardRef}
           className='relative overflow-hidden shadow-2xl transition-all duration-300 ease-out hover:scale-105 hover:shadow-3xl cursor-pointer w-36 h-36 sm:w-64 sm:h-64'
+          style={{ touchAction: 'manipulation' }}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
           onClick={handleClick}
+          onTouchEnd={handleTouchEnd}
         >
           <Image
             src={albumArt}
