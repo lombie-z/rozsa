@@ -114,7 +114,7 @@ export default function Home() {
     <PlayingProvider>
     {/* Use 100dvh (dynamic viewport height) instead of 100vh — fixes iOS Safari where
         the browser chrome eats into the viewport, causing content to be cut off. */}
-    <main ref={mainRef} className='h-[100dvh] overflow-y-auto snap-y snap-mandatory'>
+    <main ref={mainRef} className='h-[100dvh] overflow-y-auto snap-y snap-mandatory bg-[#0a0a0a]'>
       {/* Landing Section - 1 Album with Full-Height Water Shader */}
       <section
         ref={landingRef}
@@ -126,7 +126,7 @@ export default function Home() {
             Falls back to position: absolute for prefers-reduced-motion so
             the water just scrolls away naturally with the section. */}
         <motion.div
-          className='inset-0 w-full h-full'
+          className='inset-0 w-full h-full [&>div]:pointer-events-none [&_canvas]:pointer-events-none'
           style={{
             position: reducedMotion ? 'absolute' : 'fixed',
             zIndex: 10,
