@@ -44,6 +44,7 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
   const [imageLoaded, setImageLoaded] = useState(false);
   const [rotation, setRotation] = useState(0);
   const vinylRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const startTimeRef = useRef<number>(0);
 
   useEffect(() => {
@@ -81,10 +82,13 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
     doPlayPause();
   };
 
-  // Dismiss touch-active state when the user taps elsewhere
+  // Dismiss touch-active state when the user taps elsewhere (not on the card itself)
   useEffect(() => {
     if (!isTouched) return;
-    const dismiss = () => setIsTouched(false);
+    const dismiss = (e: TouchEvent) => {
+      if (cardRef.current?.contains(e.target as Node)) return;
+      setIsTouched(false);
+    };
     document.addEventListener('touchstart', dismiss, { passive: true, capture: true });
     return () => document.removeEventListener('touchstart', dismiss, { capture: true });
   }, [isTouched]);
@@ -194,6 +198,7 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
 
         {/* Album artwork */}
         <div
+          ref={cardRef}
           className='relative overflow-hidden shadow-2xl transition-all duration-300 ease-out hover:scale-105 hover:shadow-3xl cursor-pointer w-36 h-36 sm:w-64 sm:h-64'
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
