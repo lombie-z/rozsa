@@ -135,7 +135,7 @@ export default function Home() {
             // fixed canvas sit in front of the ROZSA section and block pointer events,
             // because pointer-events:none on a parent does NOT prevent children with
             // pointer-events:auto (R3F's canvas default) from receiving events.
-            display: scrollProgress >= 1 ? 'none' : undefined,
+            visibility: scrollProgress >= 1 ? 'hidden' : 'visible',
             opacity: reducedMotion ? 1 : Math.max(0, 1 - scrollProgress),
             filter: `blur(${shaderBlur}px) brightness(${shaderBrightness})`,
           }}
@@ -191,7 +191,9 @@ export default function Home() {
       </section>
 
       {/* Page 2 - 2 Records */}
-      <section className='h-[100dvh] w-full snap-start snap-always bg-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8'>
+      <section className='h-[100dvh] w-full snap-start snap-always bg-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8 relative'>
+        {/* Fade from pure black (matching ROZSA section) to the section background */}
+        <div className='absolute inset-x-0 top-0 h-16 pointer-events-none' style={{ background: 'linear-gradient(to bottom, #000000, transparent)' }} />
         <div className='max-w-7xl w-full'>
           <div className='grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 justify-items-center'>
             {page2Records.map((record, index) => (
