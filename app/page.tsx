@@ -120,10 +120,18 @@ export default function Home() {
         ref={landingRef}
         className='h-[100dvh] w-full snap-start snap-always bg-linear-to-b from-[#450a0a] to-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden'
       >
-        {/* Water Shader - Full Height Background */}
+        {/* Water Shader — fixed to the viewport so it stays in place as the
+            snap scroll happens, then fades out as the ROZSA section rises up
+            from below ("diving under the surface" effect).
+            Falls back to position: absolute for prefers-reduced-motion so
+            the water just scrolls away naturally with the section. */}
         <motion.div
-          className='absolute inset-0 w-full h-full z-0'
+          className='inset-0 w-full h-full'
           style={{
+            position: reducedMotion ? 'absolute' : 'fixed',
+            zIndex: 10,
+            pointerEvents: 'none',
+            opacity: reducedMotion ? 1 : Math.max(0, 1 - scrollProgress),
             filter: `blur(${shaderBlur}px) brightness(${shaderBrightness})`,
           }}
         >
@@ -139,18 +147,18 @@ export default function Home() {
           </Canvas>
         </motion.div>
 
-        {/* Darkening Overlay */}
+        {/* Darkening Overlay — z-20 keeps it in front of the fixed water (z-10) */}
         <motion.div
-          className='absolute inset-0 z-5 pointer-events-none'
+          className='absolute inset-0 z-20 pointer-events-none'
           style={{
             backgroundColor: 'rgba(0, 0, 0, 0.6)',
             opacity: overlayOpacity,
           }}
         />
 
-        {/* Single Album - Centered */}
+        {/* Single Album - Centered — z-30 keeps it above water (z-10) and overlay (z-20) */}
         <motion.div
-          className='max-w-7xl w-full relative z-10 flex items-center justify-center'
+          className='max-w-7xl w-full relative z-30 flex items-center justify-center'
           style={{
             opacity: albumOpacity,
             y: albumY,
