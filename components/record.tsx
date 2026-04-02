@@ -6,15 +6,6 @@ import { usePlaying } from '@/lib/playing-context';
 
 // Component-specific styles
 const componentStyles = `
-  @keyframes spin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  
   @keyframes fadeInUp {
     from {
       opacity: 0;
@@ -47,10 +38,12 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [rotation, setRotation] = useState(0);
   const vinylRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
-  const startTimeRef = useRef<number>(0);
+  // rAF-based rotation — avoids the CSS animationDelay jump on pause/resume
+  const rotationRef = useRef(0);
+  const rafRef = useRef<number | null>(null);
+  const lastTimestampRef = useRef<number | null>(null);
   // Tracks the last touchend timestamp so the ghost click fired by iOS Safari
   // ~300ms later can be ignored (React 18 registers passive touch listeners so
   // e.preventDefault() inside onTouchEnd cannot suppress the synthetic click).
@@ -60,26 +53,39 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
     setIsTouchDevice(window.matchMedia('(pointer: coarse)').matches);
   }, []);
 
-  // Calculate spin duration based on type: songs (0.75 rev/sec) vs albums (0.55 rev/sec)
-  const spinDuration = isSong ? 1 / 0.75 : 1 / 0.55; // Convert rev/sec to seconds per revolution
+  // Degrees per ms: ~3.5s per revolution for songs, ~4s for albums
+  const degreesPerMs = isSong ? 360 / 3500 : 360 / 4000;
 
-  const captureRotation = () => {
-    if (vinylRef.current) {
-      const transform = window.getComputedStyle(vinylRef.current).transform;
-      if (transform && transform !== 'none') {
-        const matrix = new DOMMatrix(transform);
-        const angle = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
-        setRotation(angle < 0 ? angle + 360 : angle);
-      }
+  // rAF spin loop — drives rotation directly on the DOM node so there is no
+  // CSS animation restart and therefore no jump when pausing/resuming.
+  useEffect(() => {
+    if (!isPlaying) {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+      lastTimestampRef.current = null;
+      return;
     }
-  };
+    const tick = (timestamp: number) => {
+      if (lastTimestampRef.current !== null) {
+        rotationRef.current = (rotationRef.current + degreesPerMs * (timestamp - lastTimestampRef.current)) % 360;
+        if (vinylRef.current) {
+          vinylRef.current.style.transform = `rotate(${rotationRef.current}deg)`;
+        }
+      }
+      lastTimestampRef.current = timestamp;
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      lastTimestampRef.current = null;
+    };
+  }, [isPlaying, degreesPerMs]);
 
   const doPlayPause = () => {
     if (isPlaying) {
-      captureRotation();
       setPlayingId(null);
     } else {
-      startTimeRef.current = Date.now();
       setPlayingId(recordId);
     }
     setIsPlaying(!isPlaying);
@@ -88,7 +94,6 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
   // Stop this record when another one starts playing
   useEffect(() => {
     if (isPlaying && playingId !== recordId) {
-      captureRotation();
       setIsPlaying(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -217,11 +222,6 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
             <div
               ref={vinylRef}
               className='w-full h-full'
-              style={{
-                transform: isPlaying ? undefined : `rotate(${rotation}deg)`,
-                animation: isPlaying ? `spin ${spinDuration}s linear infinite` : 'none',
-                animationDelay: isPlaying ? `${-rotation / (360 / spinDuration)}s` : undefined,
-              }}
             >
               <Image
                 src='https://pngimg.com/d/vinyl_PNG95.png'
@@ -275,10 +275,10 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
                   <div className='w-0 h-0 border-l-[6px] border-l-white border-t-[4px] border-t-transparent border-b-[4px] border-b-transparent ml-0.5'></div>
                 )}
               </div>
-              {/* Artist / track info — always shown on mobile when controls are active */}
+              {/* Track info — shown on mobile when controls are active */}
               <div className='sm:hidden'>
                 <div className='text-white text-[10px] font-medium whitespace-nowrap bg-black/40 backdrop-blur-sm px-2 py-1 rounded'>
-                  <span className='font-bold'>{artist}</span> • {music}
+                  {music}
                 </div>
               </div>
             </div>
