@@ -126,7 +126,7 @@ export default function Home() {
             Falls back to position: absolute for prefers-reduced-motion so
             the water just scrolls away naturally with the section. */}
         <motion.div
-          className='inset-0 w-full h-full'
+          className='water-shader-container inset-0 w-full h-full'
           style={{
             position: reducedMotion ? 'absolute' : 'fixed',
             zIndex: 10,

@@ -111,6 +111,18 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Water shader container — force pointer-events and touch-action on the canvas
+   and every element R3F creates inside it. CSS !important is required here because
+   R3F writes `touch-action: none` as an inline style on the <canvas> element, and
+   only a stylesheet rule with !important can override an inline style.
+   Without this, iOS Safari respects touch-action:none on the canvas even when
+   pointer-events:none is set, which blocks native scroll over the wave area. */
+.water-shader-container,
+.water-shader-container * {
+  pointer-events: none !important;
+  touch-action: auto !important;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
