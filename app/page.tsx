@@ -34,14 +34,14 @@ const ScanlineOverlay = dynamic(() => import('@/components/scanline-overlay'), {
 const landingRecord = { artist: 'Isaac Rozsa', music: 'New Eye (Opens)', albumArt: '/albums/new-eye-opens.jpg', audioSrc: '/audio/new-eye-opens.mp3', isSong: true };
 
 const socialLinks = [
-  { name: 'Instagram', href: 'https://instagram.com/isaacdrowns', disabled: false, icon: (
+  { name: 'Instagram', href: 'https://instagram.com/isaacrozsa', disabled: false, icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
       <rect x="2" y="2" width="20" height="20" rx="5" />
       <circle cx="12" cy="12" r="5" />
       <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
     </svg>
   )},
-  { name: 'Email', href: 'mailto:isaac.lombard@gmail.com', disabled: false, icon: (
+  { name: 'Email', href: 'mailto:irl@isaacrozsa.com', disabled: false, icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
       <rect x="2" y="4" width="20" height="16" rx="2" />
       <path d="M22 4L12 13 2 4" />
@@ -73,6 +73,7 @@ export default function Home() {
   const mainRef = useRef<HTMLElement>(null);
   const landingRef = useRef<HTMLElement>(null);
   const rozsaRef = useRef<HTMLElement>(null);
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   const isMobile = useIsMobile();
   const reducedMotion = usePrefersReducedMotion();
@@ -139,6 +140,47 @@ export default function Home() {
 
   return (
     <PlayingProvider>
+    {/* "Who am I" button */}
+    <button
+      onClick={() => setAboutOpen(true)}
+      className='fixed top-6 right-6 z-50 px-5 py-2 rounded-full border border-white/20 text-white/50 text-sm font-medium hover:border-white/40 hover:text-white/80 transition-all duration-300 backdrop-blur-sm'
+    >
+      who am I
+    </button>
+
+    {/* About modal */}
+    {aboutOpen && (
+      <div className='fixed inset-0 z-50 flex items-center justify-center' onClick={() => setAboutOpen(false)}>
+        <div className='absolute inset-0 bg-black/80 backdrop-blur-sm' />
+        <div
+          className='relative max-w-lg mx-4 bg-gradient-to-br from-[#0a0a0a] via-[#0f0505] to-[#150808] p-8 sm:p-12'
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => setAboutOpen(false)}
+            className='absolute top-5 right-5 text-white/20 hover:text-white/50 transition-colors'
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+          <h2 className='text-2xl font-bold text-white/90 mb-6 tracking-wide'>Isaac Rozsa</h2>
+          <p className='text-white/40 leading-relaxed mb-4 text-sm'>
+            Just let me experiment.
+          </p>
+          <p className='text-white/40 leading-relaxed mb-4 text-sm'>
+            Based in Sydney, Australia. Never forget the atrocities committed on this land prior.
+          </p>
+          <p className='text-white/40 leading-relaxed mb-4 text-sm'>
+            Please reach out to collaborate, at <a href='mailto:irl@isaacrozsa.com' className='text-white/60 hover:text-white/80 transition-colors'>irl@isaacrozsa.com</a>
+          </p>
+          <p className='text-white/40 leading-relaxed text-sm'>
+            Note – at this time I don't use any AI for my music.
+          </p>
+        </div>
+      </div>
+    )}
+
     {/* Use 100dvh (dynamic viewport height) instead of 100vh — fixes iOS Safari where
         the browser chrome eats into the viewport, causing content to be cut off. */}
     <main ref={mainRef} className='h-[100dvh] overflow-y-auto snap-y snap-mandatory bg-[#0a0a0a]'>
