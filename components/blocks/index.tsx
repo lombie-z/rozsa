@@ -1,5 +1,4 @@
-import { tinaField } from "tinacms/dist/react";
-import { Page, PageBlocks } from "../../tina/__generated__/types";
+import type { Page, PageBlocks } from "@/lib/types";
 import { Hero } from "./hero";
 import { Content } from "./content";
 import { Features } from "./features";
@@ -9,13 +8,13 @@ import { Callout } from "./callout";
 import { Stats } from "./stats";
 import { CallToAction } from "./call-to-action";
 
-export const Blocks = (props: Omit<Page, "id" | "_sys" | "_values">) => {
+export const Blocks = (props: Page) => {
   if (!props.blocks) return null;
   return (
     <>
       {props.blocks.map(function (block, i) {
         return (
-          <div key={i} data-tina-field={tinaField(block)}>
+          <div key={i}>
             <Block {...block} />
           </div>
         );

@@ -5,6 +5,8 @@ import { motion } from 'motion/react';
 import dynamic from 'next/dynamic';
 import { Canvas } from '@react-three/fiber';
 import MusicArtwork from '@/components/record';
+import { useIsMobile, usePrefersReducedMotion } from '@/lib/use-mobile';
+import { PlayingProvider } from '@/lib/playing-context';
 
 // Dynamically import the shader scene with SSR disabled since Three.js needs browser APIs
 const ShaderScene = dynamic(() => import('@/components/shader-scene'), {
@@ -45,10 +47,19 @@ export default function Home() {
   const landingRef = useRef<HTMLElement>(null);
   const rozsaRef = useRef<HTMLElement>(null);
 
+  const isMobile = useIsMobile();
+  const reducedMotion = usePrefersReducedMotion();
+
   // Calculate scroll progress between landing and ROZSA pages
   const [scrollProgress, setScrollProgress] = useState(0);
 
   useEffect(() => {
+    // When reduced motion is preferred, keep scroll effects frozen
+    if (reducedMotion) {
+      setScrollProgress(0);
+      return;
+    }
+
     const updateScrollProgress = () => {
       if (!mainRef.current || !landingRef.current || !rozsaRef.current) return;
 
@@ -85,26 +96,48 @@ export default function Home() {
         mainRef.current.removeEventListener('scroll', handleScroll);
       }
     };
-  }, []);
+  }, [reducedMotion]);
 
   // Calculate effect values based on scroll progress
-  const albumOpacity = Math.max(0, 1 - scrollProgress * 1.5);
-  const albumY = -scrollProgress * 100;
-  const albumScale = Math.max(0.8, 1 - scrollProgress * 0.2);
-  const overlayOpacity = Math.min(0.7, scrollProgress * 0.7);
+  // When reduced motion is preferred, skip all scroll-driven visual changes
+  const albumOpacity = reducedMotion ? 1 : Math.max(0, 1 - scrollProgress * 1.5);
+  const albumY = reducedMotion ? 0 : -scrollProgress * 100;
+  const albumScale = reducedMotion ? 1 : Math.max(0.8, 1 - scrollProgress * 0.2);
+  const overlayOpacity = reducedMotion ? 0 : Math.min(0.7, scrollProgress * 0.7);
+  const shaderBlur = reducedMotion ? 0 : scrollProgress * 3;
+  const shaderBrightness = reducedMotion ? 1 : 1 - scrollProgress * 0.3;
+
+  // Cap DPR at 1 on mobile to halve GPU fill-rate cost
+  const canvasDpr: [number, number] = isMobile ? [1, 1] : [1, 2];
 
   return (
-    <main ref={mainRef} className='h-screen overflow-y-auto snap-y snap-mandatory'>
+    <PlayingProvider>
+    {/* Use 100dvh (dynamic viewport height) instead of 100vh — fixes iOS Safari where
+        the browser chrome eats into the viewport, causing content to be cut off. */}
+    <main ref={mainRef} className='h-[100dvh] overflow-y-auto snap-y snap-mandatory bg-[#0a0a0a]'>
       {/* Landing Section - 1 Album with Full-Height Water Shader */}
       <section
         ref={landingRef}
-        className='h-screen w-full snap-start snap-always bg-linear-to-b from-[#450a0a] to-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden'
+        className='h-[100dvh] w-full snap-start snap-always bg-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden'
       >
-        {/* Water Shader - Full Height Background */}
+        {/* Water Shader — fixed to the viewport so it stays in place as the
+            snap scroll happens, then fades out as the ROZSA section rises up
+            from below ("diving under the surface" effect).
+            Falls back to position: absolute for prefers-reduced-motion so
+            the water just scrolls away naturally with the section. */}
         <motion.div
-          className='absolute inset-0 w-full h-full z-0'
+          className='water-shader-container inset-0 w-full h-full'
           style={{
-            filter: `blur(${scrollProgress * 3}px) brightness(${1 - scrollProgress * 0.3})`,
+            position: reducedMotion ? 'absolute' : 'fixed',
+            zIndex: 10,
+            pointerEvents: 'none',
+            // Hide entirely once transition is complete — opacity:0 alone still lets the
+            // fixed canvas sit in front of the ROZSA section and block pointer events,
+            // because pointer-events:none on a parent does NOT prevent children with
+            // pointer-events:auto (R3F's canvas default) from receiving events.
+            visibility: scrollProgress >= 1 ? 'hidden' : 'visible',
+            opacity: reducedMotion ? 1 : Math.max(0, 1 - scrollProgress),
+            filter: `blur(${shaderBlur}px) brightness(${shaderBrightness})`,
           }}
         >
           <Canvas
@@ -112,25 +145,36 @@ export default function Home() {
             camera={{ zoom: 1, position: [0, 0, 1], near: 0.1, far: 1000 }}
             gl={{ alpha: true, antialias: false, preserveDrawingBuffer: true }}
             style={{ width: '100%', height: '100%', display: 'block' }}
-            dpr={[1, 2]}
+            dpr={canvasDpr}
             frameloop='always'
+            onCreated={({ gl }) => {
+              // R3F sets touch-action:none inline on its canvas to handle 3D interactions.
+              // Override both the canvas and its wrapper div so native scroll (wheel +
+              // touch pan) passes through to the scrollable <main> container.
+              gl.domElement.style.pointerEvents = 'none';
+              gl.domElement.style.touchAction = 'auto';
+              if (gl.domElement.parentElement) {
+                gl.domElement.parentElement.style.pointerEvents = 'none';
+                gl.domElement.parentElement.style.touchAction = 'auto';
+              }
+            }}
           >
-            <WaterShader scrollProgress={scrollProgress} />
+            <WaterShader scrollProgress={scrollProgress} lowQuality={isMobile} />
           </Canvas>
         </motion.div>
 
-        {/* Darkening Overlay */}
+        {/* Darkening Overlay — z-20 keeps it in front of the fixed water (z-10) */}
         <motion.div
-          className='absolute inset-0 z-5 pointer-events-none'
+          className='absolute inset-0 z-20 pointer-events-none'
           style={{
             backgroundColor: 'rgba(0, 0, 0, 0.6)',
             opacity: overlayOpacity,
           }}
         />
 
-        {/* Single Album - Centered */}
+        {/* Single Album - Centered — z-30 keeps it above water (z-10) and overlay (z-20) */}
         <motion.div
-          className='max-w-7xl w-full relative z-10 flex items-center justify-center'
+          className='max-w-7xl w-full relative z-30 flex items-center justify-center'
           style={{
             opacity: albumOpacity,
             y: albumY,
@@ -142,12 +186,14 @@ export default function Home() {
       </section>
 
       {/* Page 1 - ROZSA Shader Scene */}
-      <section ref={rozsaRef} className='h-screen w-full snap-start snap-always relative bg-linear-to-b from-[#120202] to-[#0a0a0a]'>
-        <ShaderScene />
+      <section ref={rozsaRef} className='h-[100dvh] w-full snap-start snap-always relative bg-black'>
+        <ShaderScene lowQuality={isMobile} />
       </section>
 
       {/* Page 2 - 2 Records */}
-      <section className='h-screen w-full snap-start snap-always bg-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8'>
+      <section className='h-[100dvh] w-full snap-start snap-always bg-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8 relative'>
+        {/* Fade from pure black (matching ROZSA section) to the section background */}
+        <div className='absolute inset-x-0 top-0 h-16 pointer-events-none' style={{ background: 'linear-gradient(to bottom, #000000, transparent)' }} />
         <div className='max-w-7xl w-full'>
           <div className='grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 justify-items-center'>
             {page2Records.map((record, index) => (
@@ -158,7 +204,7 @@ export default function Home() {
       </section>
 
       {/* Page 3 - 2 Records */}
-      <section className='h-screen w-full snap-start snap-always bg-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8'>
+      <section className='h-[100dvh] w-full snap-start snap-always bg-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8'>
         <div className='max-w-7xl w-full'>
           <div className='grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 justify-items-center'>
             {page3Records.map((record, index) => (
@@ -169,9 +215,9 @@ export default function Home() {
       </section>
 
       {/* Page 4 - 7 Records */}
-      <section className='min-h-screen w-full snap-start snap-always bg-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8'>
+      <section className='min-h-[100dvh] w-full snap-start snap-always bg-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8'>
         <div className='max-w-7xl w-full'>
-          <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-12 lg:gap-16 justify-items-center'>
+          <div className='grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-12 lg:gap-16 justify-items-center'>
             {page4Records.map((record, index) => (
               <MusicArtwork key={index} artist={record.artist} music={record.music} albumArt={record.albumArt} isSong={record.isSong} />
             ))}
@@ -179,5 +225,6 @@ export default function Home() {
         </div>
       </section>
     </main>
+    </PlayingProvider>
   );
 }
