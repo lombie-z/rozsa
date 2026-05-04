@@ -23,10 +23,11 @@ interface MusicArtworkProps {
   music: string;
   albumArt: string;
   isSong: boolean;
+  audioSrc?: string;
   isLoading?: boolean;
 }
 
-export default function MusicArtwork({ artist, music, albumArt, isSong, isLoading = false }: MusicArtworkProps) {
+export default function MusicArtwork({ artist, music, albumArt, isSong, audioSrc, isLoading = false }: MusicArtworkProps) {
   // Stable ID for this record used to coordinate "one playing at a time"
   const recordId = `${artist}—${music}`;
   const { playingId, setPlayingId } = usePlaying();
@@ -48,6 +49,9 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
   // ~300ms later can be ignored (React 18 registers passive touch listeners so
   // e.preventDefault() inside onTouchEnd cannot suppress the synthetic click).
   const lastTouchTimeRef = useRef<number>(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const subject1Ref = useRef<HTMLImageElement>(null);
+  const subject2Ref = useRef<HTMLImageElement>(null);
   // Mirror isPlaying into a ref so the unmount cleanup can read the live value
   // without being caught in a stale closure.
   const isPlayingRef = useRef(false);
@@ -55,6 +59,33 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
   useEffect(() => {
     setIsTouchDevice(window.matchMedia('(pointer: coarse)').matches);
   }, []);
+
+  useEffect(() => {
+    if (!audioSrc) return;
+    const audio = new Audio(audioSrc);
+    audio.preload = 'metadata';
+    audioRef.current = audio;
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setPlayingId(null);
+    };
+    audio.addEventListener('ended', handleEnded);
+    return () => {
+      audio.removeEventListener('ended', handleEnded);
+      audio.pause();
+      audioRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audioSrc]);
+
+  useEffect(() => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.play();
+    } else {
+      audioRef.current.pause();
+    }
+  }, [isPlaying]);
 
   // Keep the ref in sync so unmount cleanup always sees the current value
   useEffect(() => {
@@ -94,6 +125,10 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
         if (vinylRef.current) {
           vinylRef.current.style.transform = `rotate(${rotationRef.current}deg)`;
         }
+        const c = Math.abs(Math.sin(rotationRef.current * Math.PI / 180));
+        const b = `brightness(${0.25 + 0.75 * c})`;
+        if (subject1Ref.current) subject1Ref.current.style.filter = b;
+        if (subject2Ref.current) subject2Ref.current.style.filter = b;
       }
       lastTimestampRef.current = timestamp;
       rafRef.current = requestAnimationFrame(tick);
@@ -226,7 +261,7 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
           }}
         >
           <div className='bg-neutral-900/90 backdrop-blur-md text-white px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap shadow-lg border border-neutral-700/50 animate-in fade-in zoom-in-95 duration-200'>
-            <span className='font-bold'>{artist}</span> &nbsp;•&nbsp; {music}
+            {music}
           </div>
         </div>
       )}
@@ -237,23 +272,48 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
             Mobile: w-32 (-left-12) to match the w-36 album card.
             Desktop sm+: w-60 (-left-20) — slightly smaller than the w-64 card. */}
         <div
-          className={`absolute -left-12 sm:-left-20 top-1/2 -translate-y-1/2 transition-all duration-500 ease-out ${
-            showControls ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-12 sm:translate-x-20'
+          className={`absolute -left-14 sm:-left-20 top-1/2 -translate-y-1/2 transition-all duration-500 ease-out ${
+            showControls ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-14 sm:translate-x-20'
           }`}
         >
-          <div className='relative w-32 h-32 sm:w-60 sm:h-60'>
+          <div className='relative w-36 h-36 sm:w-60 sm:h-60'>
             <div
               ref={vinylRef}
-              className='w-full h-full'
+              className='w-full h-full relative'
             >
               <Image
-                src='https://pngimg.com/d/vinyl_PNG95.png'
+                src='/vinyl.svg'
                 alt='Vinyl Record'
                 width={80}
                 height={80}
                 className='w-full h-full object-contain'
-                unoptimized
               />
+              <div className={`absolute inset-0 transition-opacity duration-700 ${isPlaying ? 'opacity-100' : 'opacity-0'}`}>
+                <div className='absolute inset-0 flex items-center justify-center'>
+                  <div className='w-[50%] h-[50%] rounded-full overflow-hidden -translate-y-[35%]'>
+                    <Image
+                      ref={subject1Ref}
+                      src='/subject.png'
+                      alt=''
+                      width={200}
+                      height={200}
+                      className='w-full h-full object-cover object-top'
+                    />
+                  </div>
+                </div>
+                <div className='absolute inset-0 flex items-center justify-center'>
+                  <div className='w-[50%] h-[50%] rounded-full overflow-hidden translate-y-[35%]'>
+                    <Image
+                      ref={subject2Ref}
+                      src='/subject2.png'
+                      alt=''
+                      width={200}
+                      height={200}
+                      className='w-full h-full object-cover object-top -scale-y-100'
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -261,7 +321,7 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, isLoadin
         {/* Album artwork */}
         <div
           ref={cardRef}
-          className='relative overflow-hidden shadow-2xl transition-all duration-300 ease-out hover:scale-105 hover:shadow-3xl cursor-pointer w-36 h-36 sm:w-64 sm:h-64'
+          className='relative overflow-hidden shadow-2xl transition-all duration-300 ease-out hover:scale-105 hover:shadow-3xl cursor-pointer w-44 h-44 sm:w-72 sm:h-72'
           style={{ touchAction: 'manipulation' }}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
