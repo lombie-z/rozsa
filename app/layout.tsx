@@ -25,8 +25,11 @@ const lato = Lato({
 });
 
 export const metadata: Metadata = {
-  title: "Tina",
-  description: "Tina Cloud Starter",
+  title: "I. Rozsa",
+  description: "Isaac Rozsa — music, visuals, and everything in between.",
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({
