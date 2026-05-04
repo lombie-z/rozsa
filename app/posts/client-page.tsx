@@ -3,8 +3,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { format } from 'date-fns';
-import { TinaMarkdown } from 'tinacms/dist/rich-text';
-import { PostConnectionQuery, PostConnectionQueryVariables } from '@/tina/__generated__/types';
+import type { Post } from '@/lib/types';
 import ErrorBoundary from '@/components/error-boundary';
 import { ArrowRight, UserRound } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -12,14 +11,11 @@ import { Section } from '@/components/layout/section';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface ClientPostProps {
-  data: PostConnectionQuery;
-  variables: PostConnectionQueryVariables;
-  query: string;
+  posts: Post[];
 }
 
-export default function PostsClientPage(props: ClientPostProps) {
-  const posts = props.data?.postConnection.edges!.map((postData) => {
-    const post = postData!.node!;
+export default function PostsClientPage({ posts }: ClientPostProps) {
+  const formattedPosts = posts.map((post) => {
     const date = new Date(post.date!);
     let formattedDate = '';
     if (!isNaN(date.getTime())) {
@@ -30,15 +26,15 @@ export default function PostsClientPage(props: ClientPostProps) {
       id: post.id,
       published: formattedDate,
       title: post.title,
-      tags: post.tags?.map((tag) => tag?.tag?.name) || [],
+      tags: post.tags || [],
       url: `/posts/${post._sys.breadcrumbs.join('/')}`,
       excerpt: post.excerpt,
       heroImg: post.heroImg,
       author: {
         name: post.author?.name || 'Anonymous',
         avatar: post.author?.avatar,
-      }
-    }
+      },
+    };
   });
 
   return (
@@ -55,7 +51,7 @@ export default function PostsClientPage(props: ClientPostProps) {
           </div>
 
           <div className="grid gap-y-10 sm:grid-cols-12 sm:gap-y-12 md:gap-y-16 lg:gap-y-20">
-            {posts.map((post) => (
+            {formattedPosts.map((post) => (
               <Card
                 key={post.id}
                 className="order-last border-0 bg-transparent shadow-none sm:order-first sm:col-span-12 lg:col-span-10 lg:col-start-2"
@@ -68,16 +64,15 @@ export default function PostsClientPage(props: ClientPostProps) {
                       </div>
                     </div>
                     <h3 className="text-xl font-semibold md:text-2xl lg:text-3xl">
-                      <Link
-                        href={post.url}
-                        className="hover:underline"
-                      >
+                      <Link href={post.url} className="hover:underline">
                         {post.title}
                       </Link>
                     </h3>
-                    <div className="mt-4 text-muted-foreground md:mt-5">
-                      <TinaMarkdown content={post.excerpt} />
-                    </div>
+                    {post.excerpt && (
+                      <div className="mt-4 text-muted-foreground md:mt-5">
+                        <p>{post.excerpt}</p>
+                      </div>
+                    )}
                     <div className="mt-6 flex items-center space-x-4 text-sm md:mt-8">
                       <Avatar>
                         {post.author.avatar && (
@@ -93,9 +88,7 @@ export default function PostsClientPage(props: ClientPostProps) {
                       </Avatar>
                       <span className="text-muted-foreground">{post.author.name}</span>
                       <span className="text-muted-foreground">•</span>
-                      <span className="text-muted-foreground">
-                        {post.published}
-                      </span>
+                      <span className="text-muted-foreground">{post.published}</span>
                     </div>
                     <div className="mt-6 flex items-center space-x-2 md:mt-8">
                       <Link

@@ -1,18 +1,16 @@
 'use client';
-import { iconSchema } from '@/tina/fields/icon';
 import Image from 'next/image';
 import Link from 'next/link';
 import * as React from 'react';
-import type { Template } from 'tinacms';
-import { tinaField } from 'tinacms/dist/react';
-import { PageBlocksHero, PageBlocksHeroImage } from '../../tina/__generated__/types';
+import type { PageBlocksHero, PageBlocksHeroImage } from '@/lib/types';
 import { Icon } from '../icon';
-import { Section, sectionBlockSchemaField } from '../layout/section';
+import { Section } from '../layout/section';
 import { AnimatedGroup } from '../motion-primitives/animated-group';
 import { TextEffect } from '../motion-primitives/text-effect';
 import { Button } from '../ui/button';
 import HeroVideoDialog from '../ui/hero-video-dialog';
 import { Transition } from 'motion/react';
+
 const transitionVariants = {
   container: {
     visible: {
@@ -42,7 +40,6 @@ const transitionVariants = {
 };
 
 export const Hero = ({ data }: { data: PageBlocksHero }) => {
-  // Extract the background style logic into a more readable format
   let gradientStyle: React.CSSProperties | undefined = undefined;
   if (data.background) {
     const colorName = data.background
@@ -61,14 +58,14 @@ export const Hero = ({ data }: { data: PageBlocksHero }) => {
     <Section background={data.background!}>
       <div className='text-center sm:mx-auto lg:mr-auto lg:mt-0'>
         {data.headline && (
-          <div data-tina-field={tinaField(data, 'headline')}>
+          <div>
             <TextEffect preset='fade-in-blur' speedSegment={0.3} as='h1' className='mt-8 text-balance text-6xl md:text-7xl xl:text-[5.25rem]'>
               {data.headline!}
             </TextEffect>
           </div>
         )}
         {data.tagline && (
-          <div data-tina-field={tinaField(data, 'tagline')}>
+          <div>
             <TextEffect per='line' preset='fade-in-blur' speedSegment={0.3} delay={0.5} as='p' className='mx-auto mt-8 max-w-2xl text-balance text-lg'>
               {data.tagline!}
             </TextEffect>
@@ -78,7 +75,7 @@ export const Hero = ({ data }: { data: PageBlocksHero }) => {
         <AnimatedGroup variants={transitionVariants} className='mt-12 flex flex-col items-center justify-center gap-2 md:flex-row'>
           {data.actions &&
             data.actions.map((action) => (
-              <div key={action!.label} data-tina-field={tinaField(action)} className='bg-foreground/10 rounded-[calc(var(--radius-xl)+0.125rem)] border p-0.5'>
+              <div key={action!.label} className='bg-foreground/10 rounded-[calc(var(--radius-xl)+0.125rem)] border p-0.5'>
                 <Button asChild size='lg' variant={action!.type === 'link' ? 'ghost' : 'default'} className='rounded-xl px-5 text-base'>
                   <Link href={action!.link!}>
                     {action?.icon && <Icon data={action?.icon} />}
@@ -92,7 +89,7 @@ export const Hero = ({ data }: { data: PageBlocksHero }) => {
 
       {data.image && (
         <AnimatedGroup variants={transitionVariants}>
-          <div className='relative -mr-56 mt-8 overflow-hidden px-2 sm:mr-0 sm:mt-12 md:mt-20 max-w-full' data-tina-field={tinaField(data, 'image')}>
+          <div className='relative -mr-56 mt-8 overflow-hidden px-2 sm:mr-0 sm:mt-12 md:mt-20 max-w-full'>
             <div aria-hidden className='bg-linear-to-b absolute inset-0 z-10 from-transparent from-35% pointer-events-none' style={gradientStyle} />
             <div className='inset-shadow-2xs ring-background dark:inset-shadow-white/20 bg-background relative mx-auto max-w-6xl overflow-hidden rounded-2xl border p-4 shadow-lg shadow-zinc-950/15 ring-1'>
               <ImageBlock image={data.image} />
@@ -130,94 +127,4 @@ const ImageBlock = ({ image }: { image: PageBlocksHeroImage }) => {
       />
     );
   }
-};
-
-export const heroBlockSchema: Template = {
-  name: 'hero',
-  label: 'Hero',
-  ui: {
-    previewSrc: '/blocks/hero.png',
-    defaultItem: {
-      tagline: "Here's some text above the other text",
-      headline: 'This Big Text is Totally Awesome',
-      text: 'Phasellus scelerisque, libero eu finibus rutrum, risus risus accumsan libero, nec molestie urna dui a leo.',
-    },
-  },
-  fields: [
-    sectionBlockSchemaField as any,
-    {
-      type: 'string',
-      label: 'Headline',
-      name: 'headline',
-    },
-    {
-      type: 'string',
-      label: 'Tagline',
-      name: 'tagline',
-    },
-    {
-      label: 'Actions',
-      name: 'actions',
-      type: 'object',
-      list: true,
-      ui: {
-        defaultItem: {
-          label: 'Action Label',
-          type: 'button',
-          icon: {
-              name: "Tina",
-              color: "white",
-              style: "float",
-          },
-          link: '/',
-        },
-        itemProps: (item) => ({ label: item.label }),
-      },
-      fields: [
-        {
-          label: 'Label',
-          name: 'label',
-          type: 'string',
-        },
-        {
-          label: 'Type',
-          name: 'type',
-          type: 'string',
-          options: [
-            { label: 'Button', value: 'button' },
-            { label: 'Link', value: 'link' },
-          ],
-        },
-        iconSchema as any,
-        {
-          label: 'Link',
-          name: 'link',
-          type: 'string',
-        },
-      ],
-    },
-    {
-      type: 'object',
-      label: 'Image',
-      name: 'image',
-      fields: [
-        {
-          name: 'src',
-          label: 'Image Source',
-          type: 'image',
-        },
-        {
-          name: 'alt',
-          label: 'Alt Text',
-          type: 'string',
-        },
-        {
-          name: 'videoUrl',
-          label: 'Video URL',
-          type: 'string',
-          description: 'If using a YouTube video, make sure to use the embed version of the video URL',
-        },
-      ],
-    },
-  ],
 };
