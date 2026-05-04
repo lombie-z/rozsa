@@ -19,35 +19,52 @@ const WaterShader = dynamic(() => import('@/components/water-shader').then((mod)
   ssr: false,
 });
 
+const FluidOverlay = dynamic(() => import('@/components/fluid-overlay'), {
+  ssr: false,
+});
+
+const GrainOverlay = dynamic(() => import('@/components/grain-overlay'), {
+  ssr: false,
+});
+
+const ScanlineOverlay = dynamic(() => import('@/components/scanline-overlay'), {
+  ssr: false,
+});
+
 const landingRecord = { artist: 'Isaac Rozsa', music: 'New Eye (Opens)', albumArt: '/albums/new-eye-opens.jpg', audioSrc: '/audio/new-eye-opens.mp3', isSong: true };
 
 const socialLinks = [
-  { name: 'Instagram', href: '#', icon: (
+  { name: 'Instagram', href: 'https://instagram.com/isaacdrowns', disabled: false, icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
       <rect x="2" y="2" width="20" height="20" rx="5" />
       <circle cx="12" cy="12" r="5" />
       <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
     </svg>
   )},
-  { name: 'Spotify', href: '#', icon: (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-      <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.6 14.4a.6.6 0 0 1-.84.2c-2.3-1.4-5.2-1.72-8.6-.94a.6.6 0 1 1-.28-1.18c3.74-.86 6.94-.48 9.52 1.08a.6.6 0 0 1 .2.84zm1.24-2.72a.78.78 0 0 1-1.06.26c-2.64-1.62-6.66-2.1-9.78-1.14a.78.78 0 0 1-.44-1.5c3.56-1.08 7.98-.56 11.02 1.3a.78.78 0 0 1 .26 1.08zm.1-2.82c-3.16-1.88-8.36-2.06-11.38-1.14a.94.94 0 1 1-.54-1.8c3.46-1.06 9.22-.86 12.86 1.32a.94.94 0 0 1-.94 1.62z" />
-    </svg>
-  )},
-  { name: 'Email', href: 'mailto:isaac.lombard@gmail.com', icon: (
+  { name: 'Email', href: 'mailto:isaac.lombard@gmail.com', disabled: false, icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
       <rect x="2" y="4" width="20" height="16" rx="2" />
       <path d="M22 4L12 13 2 4" />
     </svg>
   )},
-  { name: 'TikTok', href: '#', icon: (
+  { name: 'TikTok', href: 'https://tiktok.com/@isaac_drowns', disabled: false, icon: (
     <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
       <path d="M19.3 5.3a4.8 4.8 0 0 1-3-1.6 4.7 4.7 0 0 1-1-2.7h-3.6v13.7a2.9 2.9 0 0 1-2.9 2.7 2.9 2.9 0 0 1-2.9-2.9 2.9 2.9 0 0 1 2.9-2.9c.3 0 .6 0 .9.1V8a6.5 6.5 0 0 0-.9-.1 6.5 6.5 0 0 0-6.5 6.5A6.5 6.5 0 0 0 8.8 21a6.5 6.5 0 0 0 6.5-6.5V8.4a8.3 8.3 0 0 0 4.8 1.5V6.3a4.9 4.9 0 0 1-.8-1z" />
     </svg>
   )},
-  { name: 'SoundCloud', href: '#', icon: (
+  { name: 'SoundCloud', href: 'https://soundcloud.com/isaac-rozsa', disabled: false, icon: (
     <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
       <path d="M1.2 14.3a.2.2 0 0 0-.2.2v3a.2.2 0 0 0 .4 0v-3a.2.2 0 0 0-.2-.2zm1.5-1.3a.2.2 0 0 0-.2.2v4.6a.2.2 0 0 0 .4 0v-4.6a.2.2 0 0 0-.2-.2zm1.5-1a.2.2 0 0 0-.2.2v5.6a.2.2 0 0 0 .4 0v-5.6a.2.2 0 0 0-.2-.2zm1.5.5a.2.2 0 0 0-.2.2v5.1a.2.2 0 0 0 .4 0v-5.1a.2.2 0 0 0-.2-.2zm1.5-2a.2.2 0 0 0-.2.2v7.1a.2.2 0 0 0 .4 0v-7.1a.2.2 0 0 0-.2-.2zm1.5-.5a.2.2 0 0 0-.2.2v7.6a.2.2 0 0 0 .4 0v-7.6a.2.2 0 0 0-.2-.2zM10.2 9a.2.2 0 0 0-.2.2v8.6a.2.2 0 0 0 .2.2h.1a4.5 4.5 0 0 0 0-.4V9.2a.2.2 0 0 0-.1-.2zm1.5-.5c-.1 0-.2.1-.2.2v9.1c0 .1.1.2.2.2h9.8a2.5 2.5 0 0 0 0-5 2.5 2.5 0 0 0-.6.1 4 4 0 0 0-4-3.6 4 4 0 0 0-1.4.3V8.7a.2.2 0 0 0-.3-.2z" />
+    </svg>
+  )},
+  { name: 'Spotify', href: '#', disabled: true, icon: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+      <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.6 14.4a.6.6 0 0 1-.84.2c-2.3-1.4-5.2-1.72-8.6-.94a.6.6 0 1 1-.28-1.18c3.74-.86 6.94-.48 9.52 1.08a.6.6 0 0 1 .2.84zm1.24-2.72a.78.78 0 0 1-1.06.26c-2.64-1.62-6.66-2.1-9.78-1.14a.78.78 0 0 1-.44-1.5c3.56-1.08 7.98-.56 11.02 1.3a.78.78 0 0 1 .26 1.08zm.1-2.82c-3.16-1.88-8.36-2.06-11.38-1.14a.94.94 0 1 1-.54-1.8c3.46-1.06 9.22-.86 12.86 1.32a.94.94 0 0 1-.94 1.62z" />
+    </svg>
+  )},
+  { name: 'YouTube', href: '#', disabled: true, icon: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+      <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1c.3-1.9.5-3.8.5-5.8s-.2-3.9-.5-5.8zM9.5 15.6V8.4l6.3 3.6-6.3 3.6z" />
     </svg>
   )},
 ];
@@ -57,7 +74,6 @@ export default function Home() {
   const landingRef = useRef<HTMLElement>(null);
   const rozsaRef = useRef<HTMLElement>(null);
 
-  const [hoveredPhoto, setHoveredPhoto] = useState<number | null>(null);
   const isMobile = useIsMobile();
   const reducedMotion = usePrefersReducedMotion();
 
@@ -208,36 +224,50 @@ export default function Home() {
           {socialLinks.map((link) => (
             <a
               key={link.name}
-              href={link.href}
-              target='_blank'
-              rel='noopener noreferrer'
-              className='group py-2 text-3xl sm:text-4xl hover:drop-shadow-[0_0_18px_rgba(200,40,40,0.45)] transition-[filter] duration-300'
+              href={link.disabled ? undefined : link.href}
+              target={link.disabled ? undefined : '_blank'}
+              rel={link.disabled ? undefined : 'noopener noreferrer'}
+              onClick={link.disabled ? (e: React.MouseEvent) => e.preventDefault() : undefined}
+              className={`group relative py-2 text-3xl sm:text-4xl transition-[filter] duration-300 ${
+                link.disabled ? 'cursor-default opacity-20' : 'hover:drop-shadow-[0_0_18px_rgba(200,40,40,0.45)]'
+              }`}
             >
-              <span className='w-[1em] h-[1em] block [&>svg]:w-full [&>svg]:h-full text-white/40 group-hover:text-[#450a0a] transition-colors duration-300'>
+              <span className={`w-[1em] h-[1em] block [&>svg]:w-full [&>svg]:h-full transition-colors duration-300 ${
+                link.disabled ? 'text-white/40' : 'text-white/40 group-hover:text-[#450a0a]'
+              }`}>
                 {link.icon}
               </span>
+              {link.disabled && (
+                <span className='absolute left-full ml-3 top-1/2 -translate-y-1/2 text-xs text-white/30 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300'>
+                  coming soon
+                </span>
+              )}
             </a>
           ))}
         </div>
         {/* Photos — remaining 2/3, flex for hover expand */}
-        <div className='flex-1 relative flex min-w-0 overflow-hidden opacity-20 hover:opacity-35 transition-opacity duration-1000'>
+        <div className='flex-1 relative flex min-w-0 overflow-hidden opacity-20'>
           {['/photos/railing.jpg', '/photos/spider.jpg', '/photos/sunset.jpg'].map((src, i) => (
-            <div
-              key={src}
-              className='relative h-full overflow-hidden transition-[flex] duration-1200 ease-out'
-              style={{ flex: hoveredPhoto === null ? 1 : hoveredPhoto === i ? 2.5 : 0.5 }}
-              onMouseEnter={() => setHoveredPhoto(i)}
-              onMouseLeave={() => setHoveredPhoto(null)}
-            >
+            <div key={src} className='relative flex-1 h-full overflow-hidden'>
               <Image
                 src={src} alt='' width={600} height={900} unoptimized
                 className='absolute top-0 left-1/2 -translate-x-1/2 h-full w-auto max-w-none'
                 style={{ maskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)' }}
               />
-              <div
-                className='absolute inset-0 bg-[#450a0a] transition-opacity duration-1200 pointer-events-none'
-                style={{ opacity: hoveredPhoto === i ? 0.4 : 0 }}
-              />
+              <div className='absolute inset-0 z-20 pointer-events-none'>
+                <Canvas
+                  orthographic
+                  camera={{ zoom: 1, position: [0, 0, 1], near: 0.1, far: 1000 }}
+                  gl={{ alpha: true, antialias: false }}
+                  style={{ width: '100%', height: '100%' }}
+                  dpr={[1, 1]}
+                  frameloop='always'
+                >
+                  {i === 0 && <GrainOverlay />}
+                  {i === 1 && <ScanlineOverlay />}
+                  {i === 2 && <FluidOverlay />}
+                </Canvas>
+              </div>
             </div>
           ))}
           {/* Black fade from top */}
