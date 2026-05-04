@@ -338,7 +338,7 @@ interface ShaderSceneProps {
   lowQuality?: boolean;
 }
 
-export const ShaderScene: FC<ShaderSceneProps> = ({ lowQuality = false }) => {
+export const ShaderScene: FC<ShaderSceneProps> = React.memo(({ lowQuality = false }) => {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -372,6 +372,8 @@ export const ShaderScene: FC<ShaderSceneProps> = ({ lowQuality = false }) => {
       </Canvas>
     </div>
   );
-};
+});
+
+ShaderScene.displayName = 'ShaderScene';
 
 export default ShaderScene;

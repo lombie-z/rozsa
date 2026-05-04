@@ -289,28 +289,32 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, audioSrc
                 className='w-full h-full object-contain'
               />
               <div className={`absolute inset-0 transition-opacity duration-700 ${isPlaying ? 'opacity-100' : 'opacity-0'}`}>
+                {/* Subject 1 — top */}
                 <div className='absolute inset-0 flex items-center justify-center'>
-                  <div className='w-[50%] h-[50%] rounded-full overflow-hidden -translate-y-[35%]'>
-                    <Image
-                      ref={subject1Ref}
-                      src='/subject.png'
-                      alt=''
-                      width={200}
-                      height={200}
-                      className='w-full h-full object-cover object-top'
-                    />
+                  <div className='w-[50%] h-[50%] -translate-y-[35%] relative'>
+                    <div className='absolute inset-0 rounded-full overflow-hidden -translate-x-[8%] opacity-30'>
+                      <Image src='/subject.png' alt='' width={200} height={200} className='w-full h-full object-cover object-top' style={{ filter: 'brightness(0.4) sepia(1) saturate(10) hue-rotate(340deg)' }} />
+                    </div>
+                    <div className='absolute inset-0 rounded-full overflow-hidden translate-x-[8%] opacity-30'>
+                      <Image src='/subject.png' alt='' width={200} height={200} className='w-full h-full object-cover object-top' style={{ filter: 'brightness(0.4) sepia(1) saturate(10) hue-rotate(340deg)' }} />
+                    </div>
+                    <div className='absolute inset-0 rounded-full overflow-hidden opacity-70'>
+                      <Image ref={subject1Ref} src='/subject.png' alt='' width={200} height={200} className='w-full h-full object-cover object-top' />
+                    </div>
                   </div>
                 </div>
+                {/* Subject 2 — bottom */}
                 <div className='absolute inset-0 flex items-center justify-center'>
-                  <div className='w-[50%] h-[50%] rounded-full overflow-hidden translate-y-[35%]'>
-                    <Image
-                      ref={subject2Ref}
-                      src='/subject2.png'
-                      alt=''
-                      width={200}
-                      height={200}
-                      className='w-full h-full object-cover object-top -scale-y-100'
-                    />
+                  <div className='w-[50%] h-[50%] translate-y-[35%] relative'>
+                    <div className='absolute inset-0 rounded-full overflow-hidden -translate-x-[8%] opacity-30'>
+                      <Image src='/subject2.png' alt='' width={200} height={200} className='w-full h-full object-cover object-top -scale-y-100' style={{ filter: 'brightness(0.4) sepia(1) saturate(10) hue-rotate(340deg)' }} />
+                    </div>
+                    <div className='absolute inset-0 rounded-full overflow-hidden translate-x-[8%] opacity-30'>
+                      <Image src='/subject2.png' alt='' width={200} height={200} className='w-full h-full object-cover object-top -scale-y-100' style={{ filter: 'brightness(0.4) sepia(1) saturate(10) hue-rotate(340deg)' }} />
+                    </div>
+                    <div className='absolute inset-0 rounded-full overflow-hidden opacity-70'>
+                      <Image ref={subject2Ref} src='/subject2.png' alt='' width={200} height={200} className='w-full h-full object-cover object-top -scale-y-100' />
+                    </div>
                   </div>
                 </div>
               </div>
