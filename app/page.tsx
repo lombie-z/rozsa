@@ -169,7 +169,7 @@ export default function Home() {
             Just let me experiment.
           </p>
           <p className='text-white/40 leading-relaxed mb-4 text-sm'>
-            Based in Sydney, Australia. Never forget the atrocities committed on this land prior.
+            Based in Sydney, Australia. Never forget the atrocities committed on this land.
           </p>
           <p className='text-white/40 leading-relaxed mb-4 text-sm'>
             Please reach out to collaborate, at <a href='mailto:irl@isaacrozsa.com' className='text-white/60 hover:text-white/80 transition-colors'>irl@isaacrozsa.com</a>
