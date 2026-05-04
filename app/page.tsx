@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import { Canvas } from '@react-three/fiber';
 import MusicArtwork from '@/components/record';
 import { useIsMobile, usePrefersReducedMotion } from '@/lib/use-mobile';
@@ -18,35 +19,45 @@ const WaterShader = dynamic(() => import('@/components/water-shader').then((mod)
   ssr: false,
 });
 
-// Sample record data - replace with your actual data
-const allRecords = [
-  { artist: 'Artist One', music: 'Track One', albumArt: 'https://placehold.co/400x400/450a0a/ffffff?text=Album+1', isSong: true },
-  { artist: 'Artist Two', music: 'Track Two', albumArt: 'https://placehold.co/400x400/450a0a/ffffff?text=Album+2', isSong: false },
-  { artist: 'Artist Three', music: 'Track Three', albumArt: 'https://placehold.co/400x400/450a0a/ffffff?text=Album+3', isSong: true },
-  { artist: 'Artist Four', music: 'Track Four', albumArt: 'https://placehold.co/400x400/450a0a/ffffff?text=Album+4', isSong: false },
-  { artist: 'Artist Five', music: 'Track Five', albumArt: 'https://placehold.co/400x400/450a0a/ffffff?text=Album+5', isSong: true },
-  { artist: 'Artist Six', music: 'Track Six', albumArt: 'https://placehold.co/400x400/450a0a/ffffff?text=Album+6', isSong: false },
-  { artist: 'Artist Seven', music: 'Track Seven', albumArt: 'https://placehold.co/400x400/450a0a/ffffff?text=Album+7', isSong: true },
-  { artist: 'Artist Eight', music: 'Track Eight', albumArt: 'https://placehold.co/400x400/450a0a/ffffff?text=Album+8', isSong: false },
-  { artist: 'Artist Nine', music: 'Track Nine', albumArt: 'https://placehold.co/400x400/450a0a/ffffff?text=Album+9', isSong: true },
-  { artist: 'Artist Ten', music: 'Track Ten', albumArt: 'https://placehold.co/400x400/450a0a/ffffff?text=Album+10', isSong: false },
-  { artist: 'Artist Eleven', music: 'Track Eleven', albumArt: 'https://placehold.co/400x400/450a0a/ffffff?text=Album+11', isSong: true },
-  { artist: 'Artist Twelve', music: 'Track Twelve', albumArt: 'https://placehold.co/400x400/450a0a/ffffff?text=Album+12', isSong: false },
-  { artist: 'Artist Thirteen', music: 'Track Thirteen', albumArt: 'https://placehold.co/400x400/450a0a/ffffff?text=Album+13', isSong: true },
-  { artist: 'Artist Fourteen', music: 'Track Fourteen', albumArt: 'https://placehold.co/400x400/450a0a/ffffff?text=Album+14', isSong: false },
-];
+const landingRecord = { artist: 'Isaac Rozsa', music: 'New Eye (Opens)', albumArt: '/albums/new-eye-opens.jpg', audioSrc: '/audio/new-eye-opens.mp3', isSong: true };
 
-// Split records into pages: landing (1), then 2, 2, 7
-const landingRecord = allRecords[0]; // 1 record for landing
-const page2Records = allRecords.slice(1, 3); // 2 records (previously page 2)
-const page3Records = allRecords.slice(3, 5); // 2 records (previously page 3)
-const page4Records = allRecords.slice(5, 12); // 7 records (previously page 4)
+const socialLinks = [
+  { name: 'Instagram', href: '#', icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <rect x="2" y="2" width="20" height="20" rx="5" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  )},
+  { name: 'Spotify', href: '#', icon: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+      <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.6 14.4a.6.6 0 0 1-.84.2c-2.3-1.4-5.2-1.72-8.6-.94a.6.6 0 1 1-.28-1.18c3.74-.86 6.94-.48 9.52 1.08a.6.6 0 0 1 .2.84zm1.24-2.72a.78.78 0 0 1-1.06.26c-2.64-1.62-6.66-2.1-9.78-1.14a.78.78 0 0 1-.44-1.5c3.56-1.08 7.98-.56 11.02 1.3a.78.78 0 0 1 .26 1.08zm.1-2.82c-3.16-1.88-8.36-2.06-11.38-1.14a.94.94 0 1 1-.54-1.8c3.46-1.06 9.22-.86 12.86 1.32a.94.94 0 0 1-.94 1.62z" />
+    </svg>
+  )},
+  { name: 'Email', href: 'mailto:isaac.lombard@gmail.com', icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <path d="M22 4L12 13 2 4" />
+    </svg>
+  )},
+  { name: 'TikTok', href: '#', icon: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+      <path d="M19.3 5.3a4.8 4.8 0 0 1-3-1.6 4.7 4.7 0 0 1-1-2.7h-3.6v13.7a2.9 2.9 0 0 1-2.9 2.7 2.9 2.9 0 0 1-2.9-2.9 2.9 2.9 0 0 1 2.9-2.9c.3 0 .6 0 .9.1V8a6.5 6.5 0 0 0-.9-.1 6.5 6.5 0 0 0-6.5 6.5A6.5 6.5 0 0 0 8.8 21a6.5 6.5 0 0 0 6.5-6.5V8.4a8.3 8.3 0 0 0 4.8 1.5V6.3a4.9 4.9 0 0 1-.8-1z" />
+    </svg>
+  )},
+  { name: 'SoundCloud', href: '#', icon: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+      <path d="M1.2 14.3a.2.2 0 0 0-.2.2v3a.2.2 0 0 0 .4 0v-3a.2.2 0 0 0-.2-.2zm1.5-1.3a.2.2 0 0 0-.2.2v4.6a.2.2 0 0 0 .4 0v-4.6a.2.2 0 0 0-.2-.2zm1.5-1a.2.2 0 0 0-.2.2v5.6a.2.2 0 0 0 .4 0v-5.6a.2.2 0 0 0-.2-.2zm1.5.5a.2.2 0 0 0-.2.2v5.1a.2.2 0 0 0 .4 0v-5.1a.2.2 0 0 0-.2-.2zm1.5-2a.2.2 0 0 0-.2.2v7.1a.2.2 0 0 0 .4 0v-7.1a.2.2 0 0 0-.2-.2zm1.5-.5a.2.2 0 0 0-.2.2v7.6a.2.2 0 0 0 .4 0v-7.6a.2.2 0 0 0-.2-.2zM10.2 9a.2.2 0 0 0-.2.2v8.6a.2.2 0 0 0 .2.2h.1a4.5 4.5 0 0 0 0-.4V9.2a.2.2 0 0 0-.1-.2zm1.5-.5c-.1 0-.2.1-.2.2v9.1c0 .1.1.2.2.2h9.8a2.5 2.5 0 0 0 0-5 2.5 2.5 0 0 0-.6.1 4 4 0 0 0-4-3.6 4 4 0 0 0-1.4.3V8.7a.2.2 0 0 0-.3-.2z" />
+    </svg>
+  )},
+];
 
 export default function Home() {
   const mainRef = useRef<HTMLElement>(null);
   const landingRef = useRef<HTMLElement>(null);
   const rozsaRef = useRef<HTMLElement>(null);
 
+  const [hoveredPhoto, setHoveredPhoto] = useState<number | null>(null);
   const isMobile = useIsMobile();
   const reducedMotion = usePrefersReducedMotion();
 
@@ -118,7 +129,7 @@ export default function Home() {
       {/* Landing Section - 1 Album with Full-Height Water Shader */}
       <section
         ref={landingRef}
-        className='h-[100dvh] w-full snap-start snap-always bg-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden'
+        className='h-[100dvh] w-full snap-start snap-always bg-[#030304] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden'
       >
         {/* Water Shader — fixed to the viewport so it stays in place as the
             snap scroll happens, then fades out as the ROZSA section rises up
@@ -181,7 +192,7 @@ export default function Home() {
             scale: albumScale,
           }}
         >
-          <MusicArtwork artist={landingRecord.artist} music={landingRecord.music} albumArt={landingRecord.albumArt} isSong={landingRecord.isSong} />
+          <MusicArtwork artist={landingRecord.artist} music={landingRecord.music} albumArt={landingRecord.albumArt} audioSrc={landingRecord.audioSrc} isSong={landingRecord.isSong} />
         </motion.div>
       </section>
 
@@ -190,38 +201,47 @@ export default function Home() {
         <ShaderScene lowQuality={isMobile} />
       </section>
 
-      {/* Page 2 - 2 Records */}
-      <section className='h-[100dvh] w-full snap-start snap-always bg-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8 relative'>
-        {/* Fade from pure black (matching ROZSA section) to the section background */}
-        <div className='absolute inset-x-0 top-0 h-16 pointer-events-none' style={{ background: 'linear-gradient(to bottom, #000000, transparent)' }} />
-        <div className='max-w-7xl w-full'>
-          <div className='grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 justify-items-center'>
-            {page2Records.map((record, index) => (
-              <MusicArtwork key={index} artist={record.artist} music={record.music} albumArt={record.albumArt} isSong={record.isSong} />
-            ))}
-          </div>
+      {/* Page 2 - Social Links + Photos */}
+      <section className='h-[100dvh] w-full snap-start snap-always bg-[#030304] flex'>
+        {/* Social links — own column, ~1/3 width */}
+        <div className='w-1/3 shrink-0 flex flex-col justify-center items-center gap-6'>
+          {socialLinks.map((link) => (
+            <a
+              key={link.name}
+              href={link.href}
+              target='_blank'
+              rel='noopener noreferrer'
+              className='group py-2 text-3xl sm:text-4xl hover:drop-shadow-[0_0_18px_rgba(200,40,40,0.45)] transition-[filter] duration-300'
+            >
+              <span className='w-[1em] h-[1em] block [&>svg]:w-full [&>svg]:h-full text-white/40 group-hover:text-[#450a0a] transition-colors duration-300'>
+                {link.icon}
+              </span>
+            </a>
+          ))}
         </div>
-      </section>
-
-      {/* Page 3 - 2 Records */}
-      <section className='h-[100dvh] w-full snap-start snap-always bg-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8'>
-        <div className='max-w-7xl w-full'>
-          <div className='grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 justify-items-center'>
-            {page3Records.map((record, index) => (
-              <MusicArtwork key={index} artist={record.artist} music={record.music} albumArt={record.albumArt} isSong={record.isSong} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Page 4 - 7 Records */}
-      <section className='min-h-[100dvh] w-full snap-start snap-always bg-[#0a0a0a] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8'>
-        <div className='max-w-7xl w-full'>
-          <div className='grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-12 lg:gap-16 justify-items-center'>
-            {page4Records.map((record, index) => (
-              <MusicArtwork key={index} artist={record.artist} music={record.music} albumArt={record.albumArt} isSong={record.isSong} />
-            ))}
-          </div>
+        {/* Photos — remaining 2/3, flex for hover expand */}
+        <div className='flex-1 relative flex min-w-0 overflow-hidden opacity-20 hover:opacity-35 transition-opacity duration-1000'>
+          {['/photos/railing.jpg', '/photos/spider.jpg', '/photos/sunset.jpg'].map((src, i) => (
+            <div
+              key={src}
+              className='relative h-full overflow-hidden transition-[flex] duration-1200 ease-out'
+              style={{ flex: hoveredPhoto === null ? 1 : hoveredPhoto === i ? 2.5 : 0.5 }}
+              onMouseEnter={() => setHoveredPhoto(i)}
+              onMouseLeave={() => setHoveredPhoto(null)}
+            >
+              <Image
+                src={src} alt='' width={600} height={900} unoptimized
+                className='absolute top-0 left-1/2 -translate-x-1/2 h-full w-auto max-w-none'
+                style={{ maskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)' }}
+              />
+              <div
+                className='absolute inset-0 bg-[#450a0a] transition-opacity duration-1200 pointer-events-none'
+                style={{ opacity: hoveredPhoto === i ? 0.4 : 0 }}
+              />
+            </div>
+          ))}
+          {/* Black fade from top */}
+          <div className='absolute inset-x-0 top-0 h-2/3 bg-gradient-to-b from-black via-black/60 to-transparent pointer-events-none z-10' />
         </div>
       </section>
     </main>

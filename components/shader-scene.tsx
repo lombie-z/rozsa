@@ -259,7 +259,7 @@ void main() {
   float opacity = smoothstep(3.5, 1.5, minDistance);
   opacity = max(0.15, opacity);
 
-  gl_FragColor = vec4(1.0, 1.0, 1.0, opacity);
+  gl_FragColor = vec4(0.27, 0.04, 0.04, opacity);
 }
 `;
 
