@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { Canvas } from '@react-three/fiber';
 import MusicArtwork from '@/components/record';
 import { useIsMobile, usePrefersReducedMotion } from '@/lib/use-mobile';
-import { PlayingProvider } from '@/lib/playing-context';
+import { PlayingProvider, usePlaying } from '@/lib/playing-context';
 
 // Dynamically import the shader scene with SSR disabled since Three.js needs browser APIs
 const ShaderScene = dynamic(() => import('@/components/shader-scene'), {
@@ -68,6 +68,54 @@ const socialLinks = [
     </svg>
   )},
 ];
+
+function VolumeControl() {
+  const { volume, setVolume } = usePlaying();
+  const [expanded, setExpanded] = useState(false);
+  const muted = volume === 0;
+
+  return (
+    <div
+      className='hidden sm:flex items-center gap-2 mr-2'
+      onMouseEnter={() => setExpanded(true)}
+      onMouseLeave={() => setExpanded(false)}
+    >
+      <div
+        className={`overflow-hidden flex items-center transition-all duration-300 ease-out ${expanded ? 'w-24 opacity-100' : 'w-0 opacity-0'}`}
+      >
+        <input
+          type='range'
+          min={0}
+          max={1}
+          step={0.01}
+          value={volume}
+          onChange={(e) => setVolume(parseFloat(e.target.value))}
+          className='w-full h-3 appearance-none bg-transparent rounded-full cursor-pointer [&::-webkit-slider-runnable-track]:h-px [&::-webkit-slider-runnable-track]:bg-white/15 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white/40 [&::-webkit-slider-thumb]:-mt-[3.5px] [&::-moz-range-track]:h-px [&::-moz-range-track]:bg-white/15 [&::-moz-range-thumb]:w-2 [&::-moz-range-thumb]:h-2 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white/40 [&::-moz-range-thumb]:border-0'
+        />
+      </div>
+      <button
+        onClick={() => setVolume(muted ? 0.5 : 0)}
+        className='text-white/40 hover:text-white/70 transition-colors duration-300'
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+          {muted ? (
+            <>
+              <path d="M11 5L6 9H2v6h4l5 4V5z" />
+              <line x1="23" y1="9" x2="17" y2="15" />
+              <line x1="17" y1="9" x2="23" y2="15" />
+            </>
+          ) : (
+            <>
+              <path d="M11 5L6 9H2v6h4l5 4V5z" />
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+              {volume > 0.5 && <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />}
+            </>
+          )}
+        </svg>
+      </button>
+    </div>
+  );
+}
 
 export default function Home() {
   const mainRef = useRef<HTMLElement>(null);
@@ -140,13 +188,16 @@ export default function Home() {
 
   return (
     <PlayingProvider>
-    {/* "Who am I" button */}
-    <button
-      onClick={() => setAboutOpen(true)}
-      className='fixed top-6 right-6 z-50 px-5 py-2 rounded-full border border-white/20 text-white/50 text-sm font-medium hover:border-white/40 hover:text-white/80 transition-all duration-300 backdrop-blur-sm'
-    >
-      who am I
-    </button>
+    {/* Top-right controls */}
+    <div className='fixed top-6 right-6 z-50 flex flex-col items-end gap-3'>
+      <button
+        onClick={() => setAboutOpen(true)}
+        className='px-5 py-2 rounded-full border border-white/20 text-white/50 text-sm font-medium hover:border-white/40 hover:text-white/80 transition-all duration-300 backdrop-blur-sm'
+      >
+        who am I
+      </button>
+      <VolumeControl />
+    </div>
 
     {/* About modal */}
     {aboutOpen && (

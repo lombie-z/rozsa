@@ -30,7 +30,7 @@ interface MusicArtworkProps {
 export default function MusicArtwork({ artist, music, albumArt, isSong, audioSrc, isLoading = false }: MusicArtworkProps) {
   // Stable ID for this record used to coordinate "one playing at a time"
   const recordId = `${artist}—${music}`;
-  const { playingId, setPlayingId } = usePlaying();
+  const { playingId, setPlayingId, volume } = usePlaying();
 
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
@@ -86,6 +86,10 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, audioSrc
       audioRef.current.pause();
     }
   }, [isPlaying]);
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = volume;
+  }, [volume]);
 
   // Keep the ref in sync so unmount cleanup always sees the current value
   useEffect(() => {
