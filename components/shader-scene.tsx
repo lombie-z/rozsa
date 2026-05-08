@@ -286,8 +286,8 @@ const SceneText: FC<{ animationState: AnimationState; amount: number }> = ({ ani
   });
 
   return (
-    <Text position={[0, 0, 2]} fontSize={isSmall ? Math.min(1.6, viewport.width * 0.42) : 3.5} anchorX='center' anchorY='middle' letterSpacing={0.1} fontWeight='bold'>
-      ROZSA
+    <Text position={[0, 0, 2]} fontSize={isSmall ? Math.min(1.6, viewport.width * 0.42) : 3.5} anchorX='center' anchorY='middle' letterSpacing={0.1} font='/fonts/UnifrakturMaguntia-Regular.ttf'>
+      rozsa
       <shaderMaterial
         ref={materialRef}
         uniforms={uniforms}
