@@ -25,9 +25,11 @@ interface MusicArtworkProps {
   isSong: boolean;
   audioSrc?: string;
   isLoading?: boolean;
+  priority?: boolean;
+  onImageReady?: () => void;
 }
 
-export default function MusicArtwork({ artist, music, albumArt, isSong, audioSrc, isLoading = false }: MusicArtworkProps) {
+export default function MusicArtwork({ artist, music, albumArt, isSong, audioSrc, isLoading = false, priority = false, onImageReady }: MusicArtworkProps) {
   // Stable ID for this record used to coordinate "one playing at a time"
   const recordId = `${artist}—${music}`;
   const { playingId, setPlayingId, volume } = usePlaying();
@@ -240,7 +242,7 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, audioSrc
       <div className='relative'>
         <div className='relative group'>
           {/* Loading skeleton */}
-          <div className='w-48 h-48 sm:w-64 sm:h-64 bg-neutral-200 dark:bg-neutral-800 rounded-lg animate-pulse' />
+          <div className='w-48 h-48 sm:w-64 sm:h-64 bg-neutral-900 rounded-lg animate-pulse' />
         </div>
       </div>
     );
@@ -342,15 +344,15 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, audioSrc
             width={256}
             height={256}
             className={`w-full h-full object-cover transition-all duration-300 ease-out group-hover:scale-110 ${!imageLoaded ? 'opacity-0' : 'opacity-100'}`}
-            onLoad={() => setImageLoaded(true)}
+            onLoad={() => { setImageLoaded(true); onImageReady?.(); }}
             onError={() => {
               setImageLoaded(true);
             }}
-            unoptimized
+            priority={priority}
           />
 
           {/* Loading state overlay */}
-          {!imageLoaded && <div className='absolute inset-0 bg-neutral-200 dark:bg-neutral-800 animate-pulse' />}
+          {!imageLoaded && <div className='absolute inset-0 bg-neutral-900 animate-pulse' />}
 
           {/* Play/Pause button + artist info */}
           <div className={`absolute bottom-2 left-2 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>

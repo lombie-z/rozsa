@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { Canvas } from '@react-three/fiber';
 import MusicArtwork from '@/components/record';
+import LoadingScreen from '@/components/loading-screen';
 import { useIsMobile, usePrefersReducedMotion } from '@/lib/use-mobile';
 import { PlayingProvider, usePlaying } from '@/lib/playing-context';
 
@@ -122,6 +123,15 @@ export default function Home() {
   const landingRef = useRef<HTMLElement>(null);
   const rozsaRef = useRef<HTMLElement>(null);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [waterReady, setWaterReady] = useState(false);
+  const [albumReady, setAlbumReady] = useState(false);
+  const allReady = waterReady && albumReady;
+
+  // Fallback: never get stuck on the loading screen
+  useEffect(() => {
+    const timer = setTimeout(() => { setWaterReady(true); setAlbumReady(true); }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const isMobile = useIsMobile();
   const reducedMotion = usePrefersReducedMotion();
@@ -308,6 +318,8 @@ export default function Home() {
       </div>
     )}
 
+    <LoadingScreen ready={allReady} />
+
     {/* Use 100dvh (dynamic viewport height) instead of 100vh — fixes iOS Safari where
         the browser chrome eats into the viewport, causing content to be cut off. */}
     <main ref={mainRef} className='h-[100dvh] overflow-y-auto bg-[#0a0a0a]'>
@@ -327,15 +339,23 @@ export default function Home() {
             position: reducedMotion ? 'absolute' : 'fixed',
             zIndex: 10,
             pointerEvents: 'none',
-            // Hide entirely once transition is complete — opacity:0 alone still lets the
-            // fixed canvas sit in front of the ROZSA section and block pointer events,
-            // because pointer-events:none on a parent does NOT prevent children with
-            // pointer-events:auto (R3F's canvas default) from receiving events.
             visibility: scrollProgress >= 1 ? 'hidden' : 'visible',
             opacity: reducedMotion ? 1 : Math.max(0, 1 - scrollProgress),
             filter: `blur(${shaderBlur}px) brightness(${shaderBrightness})`,
           }}
         >
+          {/* Covers the shader canvas until it's rendered, then fades out */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundColor: '#030304',
+              opacity: waterReady ? 0 : 1,
+              transition: 'opacity 1.2s ease-in-out',
+              pointerEvents: 'none',
+              zIndex: 1,
+            }}
+          />
           <Canvas
             orthographic
             camera={{ zoom: 1, position: [0, 0, 1], near: 0.1, far: 1000 }}
@@ -344,15 +364,13 @@ export default function Home() {
             dpr={canvasDpr}
             frameloop='always'
             onCreated={({ gl }) => {
-              // R3F sets touch-action:none inline on its canvas to handle 3D interactions.
-              // Override both the canvas and its wrapper div so native scroll (wheel +
-              // touch pan) passes through to the scrollable <main> container.
               gl.domElement.style.pointerEvents = 'none';
               gl.domElement.style.touchAction = 'auto';
               if (gl.domElement.parentElement) {
                 gl.domElement.parentElement.style.pointerEvents = 'none';
                 gl.domElement.parentElement.style.touchAction = 'auto';
               }
+              setTimeout(() => setWaterReady(true), 200);
             }}
           >
             <WaterShader scrollProgress={scrollProgress} lowQuality={isMobile} />
@@ -377,7 +395,7 @@ export default function Home() {
             scale: albumScale,
           }}
         >
-          <MusicArtwork artist={landingRecord.artist} music={landingRecord.music} albumArt={landingRecord.albumArt} audioSrc={landingRecord.audioSrc} isSong={landingRecord.isSong} />
+          <MusicArtwork artist={landingRecord.artist} music={landingRecord.music} albumArt={landingRecord.albumArt} audioSrc={landingRecord.audioSrc} isSong={landingRecord.isSong} priority onImageReady={() => setAlbumReady(true)} />
         </motion.div>
       </section>
 
