@@ -140,9 +140,6 @@ export default function Home() {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [copied, setCopied] = useState(false);
 
-  // JS-based section snapping — replaces CSS snap-mandatory for consistent
-  // cross-browser scroll speed. Uses scrollTo with smooth behavior and a
-  // cooldown to prevent rapid-fire section changes.
   const sectionRefs = [landingRef, rozsaRef];
   const snappingRef = useRef(false);
 
@@ -151,21 +148,15 @@ export default function Home() {
     const el = mainRef.current;
     if (!el) return;
 
-    const sections = sectionRefs.map((r) => r.current).filter(Boolean) as HTMLElement[];
-    // Also include the third section (social links) which has no ref
     const allSections = Array.from(el.querySelectorAll(':scope > section')) as HTMLElement[];
 
     const getCurrentIndex = () => {
       const scrollTop = el.scrollTop;
-      const viewportH = el.clientHeight;
       let closest = 0;
       let minDist = Infinity;
       for (let i = 0; i < allSections.length; i++) {
         const dist = Math.abs(allSections[i].offsetTop - scrollTop);
-        if (dist < minDist) {
-          minDist = dist;
-          closest = i;
-        }
+        if (dist < minDist) { minDist = dist; closest = i; }
       }
       return closest;
     };
@@ -174,15 +165,39 @@ export default function Home() {
       if (index < 0 || index >= allSections.length) return;
       snappingRef.current = true;
       el.scrollTo({ top: allSections[index].offsetTop, behavior: 'smooth' });
-      setTimeout(() => { snappingRef.current = false; }, 500);
+      setTimeout(() => { snappingRef.current = false; }, 700);
+    };
+
+    // Acceleration-based trackpad inertia filter:
+    // Real swipes have increasing deltas, inertia has decreasing.
+    // Compare recent avg vs broader avg to tell them apart.
+    const scrollings: number[] = [];
+    let lastWheelTime = 0;
+
+    const isAccelerating = () => {
+      if (scrollings.length < 10) return true;
+      const recent = scrollings.slice(-10);
+      const broad = scrollings.slice(-70);
+      const avgRecent = recent.reduce((a, b) => a + b, 0) / recent.length;
+      const avgBroad = broad.reduce((a, b) => a + b, 0) / broad.length;
+      return avgRecent >= avgBroad;
     };
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       if (snappingRef.current) return;
+
+      const now = Date.now();
+      if (now - lastWheelTime > 200) scrollings.length = 0;
+      lastWheelTime = now;
+
+      scrollings.push(Math.abs(e.deltaY));
+      if (scrollings.length > 150) scrollings.splice(0, scrollings.length - 150);
+
+      if (!isAccelerating()) return;
+
       const direction = e.deltaY > 0 ? 1 : -1;
-      const current = getCurrentIndex();
-      scrollToSection(current + direction);
+      scrollToSection(getCurrentIndex() + direction);
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
@@ -195,7 +210,6 @@ export default function Home() {
       scrollToSection(getCurrentIndex() + direction);
     };
 
-    // Touch handling
     let touchStartY = 0;
     const onTouchStart = (e: TouchEvent) => { touchStartY = e.touches[0].clientY; };
     const onTouchEnd = (e: TouchEvent) => {
