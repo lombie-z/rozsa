@@ -39,6 +39,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={cn(fontSans.variable, nunito.variable, lato.variable)} style={{ backgroundColor: '#030304' }}>
+      <head>
+        <link rel="preload" href="/fonts/UnifrakturMaguntia-Regular.ttf" as="font" type="font/ttf" crossOrigin="anonymous" />
+      </head>
       <body className="min-h-screen bg-background font-sans antialiased">
         <VideoDialogProvider>
           {children}
