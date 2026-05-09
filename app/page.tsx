@@ -129,8 +129,85 @@ export default function Home() {
   // Calculate scroll progress between landing and ROZSA pages
   const [scrollProgress, setScrollProgress] = useState(0);
 
+  // JS-based section snapping — replaces CSS snap-mandatory for consistent
+  // cross-browser scroll speed. Uses scrollTo with smooth behavior and a
+  // cooldown to prevent rapid-fire section changes.
+  const sectionRefs = [landingRef, rozsaRef];
+  const snappingRef = useRef(false);
+
   useEffect(() => {
-    // When reduced motion is preferred, keep scroll effects frozen
+    if (reducedMotion) return;
+    const el = mainRef.current;
+    if (!el) return;
+
+    const sections = sectionRefs.map((r) => r.current).filter(Boolean) as HTMLElement[];
+    // Also include the third section (social links) which has no ref
+    const allSections = Array.from(el.querySelectorAll(':scope > section')) as HTMLElement[];
+
+    const getCurrentIndex = () => {
+      const scrollTop = el.scrollTop;
+      const viewportH = el.clientHeight;
+      let closest = 0;
+      let minDist = Infinity;
+      for (let i = 0; i < allSections.length; i++) {
+        const dist = Math.abs(allSections[i].offsetTop - scrollTop);
+        if (dist < minDist) {
+          minDist = dist;
+          closest = i;
+        }
+      }
+      return closest;
+    };
+
+    const scrollToSection = (index: number) => {
+      if (index < 0 || index >= allSections.length) return;
+      snappingRef.current = true;
+      el.scrollTo({ top: allSections[index].offsetTop, behavior: 'smooth' });
+      setTimeout(() => { snappingRef.current = false; }, 500);
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (snappingRef.current) return;
+      const direction = e.deltaY > 0 ? 1 : -1;
+      const current = getCurrentIndex();
+      scrollToSection(current + direction);
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (snappingRef.current) return;
+      let direction = 0;
+      if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') direction = 1;
+      if (e.key === 'ArrowUp' || e.key === 'PageUp') direction = -1;
+      if (direction === 0) return;
+      e.preventDefault();
+      scrollToSection(getCurrentIndex() + direction);
+    };
+
+    // Touch handling
+    let touchStartY = 0;
+    const onTouchStart = (e: TouchEvent) => { touchStartY = e.touches[0].clientY; };
+    const onTouchEnd = (e: TouchEvent) => {
+      if (snappingRef.current) return;
+      const delta = touchStartY - e.changedTouches[0].clientY;
+      if (Math.abs(delta) < 50) return;
+      scrollToSection(getCurrentIndex() + (delta > 0 ? 1 : -1));
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    el.addEventListener('keydown', onKeyDown);
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('keydown', onKeyDown);
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [reducedMotion]);
+
+  useEffect(() => {
     if (reducedMotion) {
       setScrollProgress(0);
       return;
@@ -143,7 +220,6 @@ export default function Home() {
       const landingBottom = landingRef.current.offsetTop + landingRef.current.offsetHeight;
       const rozsaTop = rozsaRef.current.offsetTop;
 
-      // Calculate progress from 0 (top of landing) to 1 (top of ROZSA page)
       const transitionStart = landingBottom - window.innerHeight;
       const transitionEnd = rozsaTop;
       const transitionDistance = transitionEnd - transitionStart;
@@ -164,7 +240,7 @@ export default function Home() {
 
     if (mainRef.current) {
       mainRef.current.addEventListener('scroll', handleScroll, { passive: true });
-      updateScrollProgress(); // Initial calculation
+      updateScrollProgress();
     }
 
     return () => {
@@ -234,11 +310,11 @@ export default function Home() {
 
     {/* Use 100dvh (dynamic viewport height) instead of 100vh — fixes iOS Safari where
         the browser chrome eats into the viewport, causing content to be cut off. */}
-    <main ref={mainRef} className='h-[100dvh] overflow-y-auto snap-y snap-mandatory bg-[#0a0a0a]'>
+    <main ref={mainRef} className='h-[100dvh] overflow-y-auto bg-[#0a0a0a]'>
       {/* Landing Section - 1 Album with Full-Height Water Shader */}
       <section
         ref={landingRef}
-        className='h-[100dvh] w-full snap-start snap-always bg-[#030304] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden'
+        className='h-[100dvh] w-full bg-[#030304] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden'
       >
         {/* Water Shader — fixed to the viewport so it stays in place as the
             snap scroll happens, then fades out as the ROZSA section rises up
@@ -306,12 +382,12 @@ export default function Home() {
       </section>
 
       {/* Page 1 - ROZSA Shader Scene */}
-      <section ref={rozsaRef} className='h-[100dvh] w-full snap-start snap-always relative bg-black'>
+      <section ref={rozsaRef} className='h-[100dvh] w-full relative bg-black'>
         <ShaderScene lowQuality={isMobile} />
       </section>
 
       {/* Page 2 - Social Links + Photos */}
-      <section className='h-[100dvh] w-full snap-start snap-always bg-[#030304] flex'>
+      <section className='h-[100dvh] w-full bg-[#030304] flex'>
         {/* Social links — own column, ~1/3 width */}
         <div className='w-1/3 shrink-0 flex flex-col justify-center items-center gap-6'>
           {socialLinks.map((link) => (
