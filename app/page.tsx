@@ -42,7 +42,7 @@ const socialLinks = [
       <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
     </svg>
   )},
-  { name: 'Email', href: 'mailto:irl@isaacrozsa.com', disabled: false, icon: (
+  { name: 'Email', href: '#', disabled: false, copyEmail: true, icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
       <rect x="2" y="4" width="20" height="16" rx="2" />
       <path d="M22 4L12 13 2 4" />
@@ -413,10 +413,10 @@ export default function Home() {
           {socialLinks.map((link) => (
             <a
               key={link.name}
-              href={link.disabled ? undefined : link.href}
-              target={link.disabled ? undefined : '_blank'}
-              rel={link.disabled ? undefined : 'noopener noreferrer'}
-              onClick={link.disabled ? (e: React.MouseEvent) => e.preventDefault() : undefined}
+              href={link.disabled || link.copyEmail ? undefined : link.href}
+              target={link.disabled || link.copyEmail ? undefined : '_blank'}
+              rel={link.disabled || link.copyEmail ? undefined : 'noopener noreferrer'}
+              onClick={link.copyEmail ? (e: React.MouseEvent) => { e.preventDefault(); navigator.clipboard.writeText('irl@isaacrozsa.com').then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }); } : link.disabled ? (e: React.MouseEvent) => e.preventDefault() : undefined}
               className={`group relative py-2 text-3xl sm:text-4xl transition-[filter] duration-300 ${
                 link.disabled ? 'cursor-default opacity-20' : 'hover:drop-shadow-[0_0_18px_rgba(200,40,40,0.45)]'
               }`}
@@ -429,6 +429,11 @@ export default function Home() {
               {link.disabled && (
                 <span className='absolute left-full ml-3 top-1/2 -translate-y-1/2 text-xs text-white/30 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300'>
                   coming soon
+                </span>
+              )}
+              {link.copyEmail && copied && (
+                <span className='absolute left-full ml-3 top-1/2 -translate-y-1/2 text-xs text-white/30 whitespace-nowrap transition-opacity duration-300'>
+                  copied!
                 </span>
               )}
             </a>
