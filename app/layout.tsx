@@ -38,7 +38,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={cn(fontSans.variable, nunito.variable, lato.variable)}>
+    <html lang="en" className={cn(fontSans.variable, nunito.variable, lato.variable)} style={{ backgroundColor: '#030304' }}>
       <body className="min-h-screen bg-background font-sans antialiased">
         <VideoDialogProvider>
           {children}
