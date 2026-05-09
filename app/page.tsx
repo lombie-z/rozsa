@@ -141,7 +141,8 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
 
   const sectionRefs = [landingRef, rozsaRef];
-  const snappingRef = useRef(false);
+  const canScrollRef = useRef(true);
+  const targetIndexRef = useRef(0);
 
   useEffect(() => {
     if (reducedMotion) return;
@@ -149,28 +150,39 @@ export default function Home() {
     if (!el) return;
 
     const allSections = Array.from(el.querySelectorAll(':scope > section')) as HTMLElement[];
+    const SCROLL_SPEED = 700;
 
-    const getCurrentIndex = () => {
-      const scrollTop = el.scrollTop;
-      let closest = 0;
-      let minDist = Infinity;
-      for (let i = 0; i < allSections.length; i++) {
-        const dist = Math.abs(allSections[i].offsetTop - scrollTop);
-        if (dist < minDist) { minDist = dist; closest = i; }
-      }
-      return closest;
-    };
+    // Snap to nearest section on mount
+    const scrollTop = el.scrollTop;
+    let closest = 0;
+    let minDist = Infinity;
+    for (let i = 0; i < allSections.length; i++) {
+      const dist = Math.abs(allSections[i].offsetTop - scrollTop);
+      if (dist < minDist) { minDist = dist; closest = i; }
+    }
+    targetIndexRef.current = closest;
 
     const scrollToSection = (index: number) => {
-      if (index < 0 || index >= allSections.length) return;
-      snappingRef.current = true;
-      el.scrollTo({ top: allSections[index].offsetTop, behavior: 'smooth' });
-      setTimeout(() => { snappingRef.current = false; }, 700);
+      const clamped = Math.max(0, Math.min(allSections.length - 1, index));
+      if (clamped === targetIndexRef.current) return;
+      targetIndexRef.current = clamped;
+      canScrollRef.current = false;
+      el.scrollTo({ top: allSections[clamped].offsetTop, behavior: 'smooth' });
     };
 
-    // Acceleration-based trackpad inertia filter:
-    // Real swipes have increasing deltas, inertia has decreasing.
-    // Compare recent avg vs broader avg to tell them apart.
+    // Re-enable scrolling when smooth scroll finishes.
+    // scrollend fires reliably in modern browsers; setTimeout is a fallback.
+    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+    const onScrollEnd = () => {
+      canScrollRef.current = true;
+      scrollings.length = 0;
+      if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
+    };
+    el.addEventListener('scrollend', onScrollEnd);
+
+    // Acceleration-based inertia filter: real swipes have increasing
+    // deltas, trackpad inertia has decreasing. Compare recent average
+    // against a broader window to tell them apart.
     const scrollings: number[] = [];
     let lastWheelTime = 0;
 
@@ -185,7 +197,7 @@ export default function Home() {
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      if (snappingRef.current) return;
+      if (!canScrollRef.current) return;
 
       const now = Date.now();
       if (now - lastWheelTime > 200) scrollings.length = 0;
@@ -197,26 +209,33 @@ export default function Home() {
       if (!isAccelerating()) return;
 
       const direction = e.deltaY > 0 ? 1 : -1;
-      scrollToSection(getCurrentIndex() + direction);
+      scrollToSection(targetIndexRef.current + direction);
+      // Fallback in case scrollend doesn't fire (e.g. already at target)
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      fallbackTimer = setTimeout(onScrollEnd, SCROLL_SPEED + 100);
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (snappingRef.current) return;
+      if (!canScrollRef.current) return;
       let direction = 0;
       if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') direction = 1;
       if (e.key === 'ArrowUp' || e.key === 'PageUp') direction = -1;
       if (direction === 0) return;
       e.preventDefault();
-      scrollToSection(getCurrentIndex() + direction);
+      scrollToSection(targetIndexRef.current + direction);
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      fallbackTimer = setTimeout(onScrollEnd, SCROLL_SPEED + 100);
     };
 
     let touchStartY = 0;
     const onTouchStart = (e: TouchEvent) => { touchStartY = e.touches[0].clientY; };
     const onTouchEnd = (e: TouchEvent) => {
-      if (snappingRef.current) return;
+      if (!canScrollRef.current) return;
       const delta = touchStartY - e.changedTouches[0].clientY;
       if (Math.abs(delta) < 50) return;
-      scrollToSection(getCurrentIndex() + (delta > 0 ? 1 : -1));
+      scrollToSection(targetIndexRef.current + (delta > 0 ? 1 : -1));
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      fallbackTimer = setTimeout(onScrollEnd, SCROLL_SPEED + 100);
     };
 
     el.addEventListener('wheel', onWheel, { passive: false });
@@ -229,6 +248,8 @@ export default function Home() {
       el.removeEventListener('keydown', onKeyDown);
       el.removeEventListener('touchstart', onTouchStart);
       el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('scrollend', onScrollEnd);
+      if (fallbackTimer) clearTimeout(fallbackTimer);
     };
   }, [reducedMotion]);
 
