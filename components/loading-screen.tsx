@@ -18,36 +18,37 @@ const LoadingScreen: FC<LoadingScreenProps> = ({ ready }) => {
   const [phase, setPhase] = useState<'filling' | 'fading-r' | 'revealing'>('filling');
   const [dismissed, setDismissed] = useState(false);
   const mountTime = useRef(Date.now());
-  const readyTime = useRef<number | null>(null);
+  const readyRef = useRef(false);
+  const currentFill = useRef(0);
+  const doneRef = useRef(false);
 
-  useEffect(() => {
-    if (ready && !readyTime.current) {
-      readyTime.current = Date.now();
-    }
-  }, [ready]);
+  useEffect(() => { readyRef.current = ready; }, [ready]);
 
   useEffect(() => {
     let raf: number;
     const animate = () => {
+      if (doneRef.current) return;
       const elapsed = Date.now() - mountTime.current;
-      const isReady = readyTime.current !== null;
-      const minTimeMet = elapsed >= MIN_DISPLAY_MS;
+      const canFinish = readyRef.current && elapsed >= MIN_DISPLAY_MS;
 
-      if (isReady && minTimeMet) {
-        setFillPercent(100);
+      const speed = canFinish ? 0.06 : 0.012;
+      const next = currentFill.current + (130 - currentFill.current) * speed;
+      currentFill.current = next;
+      setFillPercent(next);
+
+      if (next >= 120) {
+        doneRef.current = true;
         setPhase('fading-r');
         setTimeout(() => setPhase('revealing'), 800);
         setTimeout(() => setDismissed(true), 2000);
         return;
       }
 
-      const target = isReady ? 95 : Math.min(85, (elapsed / MIN_DISPLAY_MS) * 85);
-      setFillPercent((prev) => prev + (target - prev) * 0.03);
       raf = requestAnimationFrame(animate);
     };
     raf = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(raf);
-  }, [ready]);
+  }, []);
 
   if (dismissed) return null;
 
@@ -84,10 +85,9 @@ const LoadingScreen: FC<LoadingScreenProps> = ({ ready }) => {
       <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox={`0 0 ${GLYPH_W} ${GLYPH_H}`}
-        preserveAspectRatio="xMidYMid meet"
         style={{
-          width: 'min(30vw, 35vh)',
-          height: 'auto',
+          width: 'min(14vw, 16vh)',
+          height: `calc(min(14vw, 16vh) * ${GLYPH_H} / ${GLYPH_W})`,
           overflow: 'visible',
           opacity: phase === 'filling' ? 1 : 0,
           transition: 'opacity 0.8s ease-out',
@@ -95,7 +95,7 @@ const LoadingScreen: FC<LoadingScreenProps> = ({ ready }) => {
       >
         <defs>
           <clipPath id="r-clip">
-            <path d={R_PATH} />
+            <path d={R_PATH} transform={`scale(1,-1) translate(0,${-GLYPH_H})`} />
           </clipPath>
         </defs>
 
@@ -105,7 +105,7 @@ const LoadingScreen: FC<LoadingScreenProps> = ({ ready }) => {
           fill="rgba(120, 35, 25, 0.35)"
           stroke="rgba(180, 60, 40, 0.4)"
           strokeWidth="0.3"
-          transform="translate(-3, 4)"
+          transform={`scale(1,-1) translate(-6,${-GLYPH_H - 8})`}
         />
 
         {/* Everything clipped to the "r" shape */}
@@ -119,39 +119,22 @@ const LoadingScreen: FC<LoadingScreenProps> = ({ ready }) => {
             fill="rgba(100, 15, 15, 0.9)"
           />
 
-          {/* Wave layer 1 */}
-          <path
+          {/* Highlight layer at fill edge */}
+          <rect
+            x="-5"
+            y={fillY - 4}
+            width={GLYPH_W + 10}
+            height="4"
             fill="rgba(140, 25, 20, 0.7)"
-            transform={`translate(0, ${fillY - 6})`}
-          >
-            <animate
-              attributeName="d"
-              dur="2s"
-              repeatCount="indefinite"
-              values="
-                M-5,10 Q8,0 22,10 T50,10 T78,10 T96,10 L96,24 L-5,24 Z;
-                M-5,10 Q8,20 22,10 T50,10 T78,10 T96,10 L96,24 L-5,24 Z;
-                M-5,10 Q8,0 22,10 T50,10 T78,10 T96,10 L96,24 L-5,24 Z
-              "
-            />
-          </path>
-
-          {/* Wave layer 2 (offset phase) */}
-          <path
+          />
+          {/* Darker layer below highlight */}
+          <rect
+            x="-5"
+            y={fillY - 2}
+            width={GLYPH_W + 10}
+            height="2"
             fill="rgba(80, 15, 12, 0.5)"
-            transform={`translate(0, ${fillY - 3})`}
-          >
-            <animate
-              attributeName="d"
-              dur="2.8s"
-              repeatCount="indefinite"
-              values="
-                M-5,10 Q12,18 30,10 T60,10 T85,10 T96,10 L96,24 L-5,24 Z;
-                M-5,10 Q12,2 30,10 T60,10 T85,10 T96,10 L96,24 L-5,24 Z;
-                M-5,10 Q12,18 30,10 T60,10 T85,10 T96,10 L96,24 L-5,24 Z
-              "
-            />
-          </path>
+          />
         </g>
       </svg>
     </div>
