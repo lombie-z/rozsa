@@ -311,7 +311,7 @@ export default function Home() {
             Never forget the atrocities committed on this land.
           </p>
           <p className='text-white/40 leading-relaxed mb-4 text-sm'>
-            Please reach out to collaborate, or for a sick website, at <button onClick={() => { navigator.clipboard.writeText('irl@isaacrozsa.com').then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }); }} className='text-white/60 hover:text-white/80 transition-colors'>{copied ? 'copied' : 'irl@isaacrozsa.com'}</button>
+            Please reach out to collaborate, or for a sick website, at <span className='relative inline-block'><button onClick={() => { navigator.clipboard.writeText('irl@isaacrozsa.com').then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }); }} className='text-white/60 hover:text-white/80 transition-colors'>irl@isaacrozsa.com</button>{copied && <span className='absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-white/50 whitespace-nowrap'>copied</span>}</span>
           </p>
           <p className='text-white/40 leading-relaxed text-sm'>
             Note – at this time I don't use any AI for my music.
