@@ -8,10 +8,11 @@ interface LoadingScreenProps {
 
 const MIN_DISPLAY_MS = 2000;
 
-// The "r" glyph occupies roughly y=30 to y=240 in the 300-tall viewBox.
-// Map fill percent to that range so the fill is visible from the start.
-const TEXT_TOP = 30;
-const TEXT_BOTTOM = 240;
+// Bounding box of the extracted "r" glyph path
+const GLYPH_TOP = 106;
+const GLYPH_BOTTOM = 256;
+
+const R_PATH = 'M53.59 214.06L53.46 147.75Q53.46 143.38 55.64 142.15L65.49 136.40Q68.63 134.49 75.06 143.10Q76.43 144.88 78.48 143.86Q80.53 142.83 78.48 140.37Q64.12 124.37 56.46 108.92Q54.14 105.78 51.41 108.92Q43.75 117.81 37.12 122.46Q30.49 127.11 17.64 130.12Q15.18 130.80 15.18 132.30Q15.18 133.81 16.95 134.49Q26.11 135.99 25.98 150.21L25.98 208.05Q25.98 221.99 20.78 225.14Q14.77 229.10 10.94 222.26Q9.43 219.39 7.52 220.90Q5.61 222.40 7.66 225.68Q11.62 231.97 15.24 238.53Q18.87 245.10 22.70 251.66Q25.02 255.76 28.85 253.16Q48.95 243.46 52.91 228.55Q53.32 227.19 54.55 226.84Q55.78 226.50 56.74 227.73L77.79 251.93Q78.61 252.75 79.71 252.68Q80.80 252.62 81.48 251.52L95.84 224.04Q96.39 222.81 95.57 221.72L79.16 202.03Q78.20 201.07 77.04 201.21Q75.88 201.35 75.47 202.44L64.39 222.95Q63.85 223.77 62.69 223.97Q61.52 224.18 60.57 223.22L54.14 215.43Q53.59 214.88 53.59 214.06';
 
 const LoadingScreen: FC<LoadingScreenProps> = ({ ready }) => {
   const [fillPercent, setFillPercent] = useState(0);
@@ -51,8 +52,7 @@ const LoadingScreen: FC<LoadingScreenProps> = ({ ready }) => {
 
   if (dismissed) return null;
 
-  // Map fill percent to the letter's vertical bounds
-  const fillY = TEXT_BOTTOM - (fillPercent / 100) * (TEXT_BOTTOM - TEXT_TOP);
+  const fillY = GLYPH_BOTTOM - (fillPercent / 100) * (GLYPH_BOTTOM - GLYPH_TOP);
 
   return (
     <div
@@ -69,7 +69,7 @@ const LoadingScreen: FC<LoadingScreenProps> = ({ ready }) => {
         pointerEvents: phase === 'revealing' ? 'none' : 'all',
       }}
     >
-      {/* Ambient red glow — intensifies with fill */}
+      {/* Ambient red glow */}
       <div
         style={{
           position: 'absolute',
@@ -83,9 +83,9 @@ const LoadingScreen: FC<LoadingScreenProps> = ({ ready }) => {
         }}
       />
       <svg
-        viewBox="0 0 200 300"
+        viewBox="0 0 105 270"
         style={{
-          width: 'min(35vw, 40vh)',
+          width: 'min(30vw, 35vh)',
           height: 'auto',
           overflow: 'visible',
           opacity: phase === 'filling' ? 1 : 0,
@@ -94,56 +94,43 @@ const LoadingScreen: FC<LoadingScreenProps> = ({ ready }) => {
       >
         <defs>
           <clipPath id="r-clip">
-            <text
-              x="50%"
-              y="75%"
-              fontFamily="'UnifrakturMaguntia', serif"
-              fontSize="280"
-              textAnchor="middle"
-            >
-              r
-            </text>
+            <path d={R_PATH} />
           </clipPath>
         </defs>
 
-        {/* Outline "r" — offset down-left for depth (double vision) */}
-        <text
-          x="96"
-          y="231"
-          dx="-4"
-          dy="6"
-          fontFamily="'UnifrakturMaguntia', serif"
-          fontSize="280"
-          textAnchor="middle"
+        {/* Outline "r" — offset down-left for depth */}
+        <path
+          d={R_PATH}
           fill="rgba(120, 35, 25, 0.35)"
           stroke="rgba(180, 60, 40, 0.4)"
           strokeWidth="0.3"
-        >r</text>
+          transform="translate(-4, 6)"
+        />
 
-        {/* Everything inside clipped to the "r" shape */}
+        {/* Everything clipped to the "r" shape */}
         <g clipPath="url(#r-clip)">
           {/* Solid fill rising from bottom */}
           <rect
-            x="-20"
+            x="-10"
             y={fillY}
-            width="240"
-            height={TEXT_BOTTOM - fillY + 20}
+            width="120"
+            height={GLYPH_BOTTOM - fillY + 10}
             fill="rgba(100, 15, 15, 0.9)"
           />
 
-          {/* Wave layer 1 — taller waves for visibility */}
+          {/* Wave layer 1 */}
           <path
             fill="rgba(140, 25, 20, 0.7)"
-            transform={`translate(0, ${fillY - 10})`}
+            transform={`translate(0, ${fillY - 8})`}
           >
             <animate
               attributeName="d"
               dur="2s"
               repeatCount="indefinite"
               values="
-                M-20,18 Q10,0 40,18 T100,18 T160,18 T220,18 L220,40 L-20,40 Z;
-                M-20,18 Q10,36 40,18 T100,18 T160,18 T220,18 L220,40 L-20,40 Z;
-                M-20,18 Q10,0 40,18 T100,18 T160,18 T220,18 L220,40 L-20,40 Z
+                M-10,12 Q8,0 25,12 T60,12 T95,12 T115,12 L115,30 L-10,30 Z;
+                M-10,12 Q8,24 25,12 T60,12 T95,12 T115,12 L115,30 L-10,30 Z;
+                M-10,12 Q8,0 25,12 T60,12 T95,12 T115,12 L115,30 L-10,30 Z
               "
             />
           </path>
@@ -151,22 +138,21 @@ const LoadingScreen: FC<LoadingScreenProps> = ({ ready }) => {
           {/* Wave layer 2 (offset phase) */}
           <path
             fill="rgba(80, 15, 12, 0.5)"
-            transform={`translate(0, ${fillY - 5})`}
+            transform={`translate(0, ${fillY - 4})`}
           >
             <animate
               attributeName="d"
               dur="2.8s"
               repeatCount="indefinite"
               values="
-                M-20,18 Q25,34 60,18 T120,18 T180,18 T220,18 L220,40 L-20,40 Z;
-                M-20,18 Q25,2 60,18 T120,18 T180,18 T220,18 L220,40 L-20,40 Z;
-                M-20,18 Q25,34 60,18 T120,18 T180,18 T220,18 L220,40 L-20,40 Z
+                M-10,12 Q15,22 35,12 T70,12 T100,12 T115,12 L115,30 L-10,30 Z;
+                M-10,12 Q15,2 35,12 T70,12 T100,12 T115,12 L115,30 L-10,30 Z;
+                M-10,12 Q15,22 35,12 T70,12 T100,12 T115,12 L115,30 L-10,30 Z
               "
             />
           </path>
         </g>
       </svg>
-
     </div>
   );
 };
