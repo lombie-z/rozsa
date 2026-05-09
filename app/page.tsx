@@ -145,17 +145,19 @@ export default function Home() {
   // cooldown to prevent rapid-fire section changes.
   const sectionRefs = [landingRef, rozsaRef];
   const snappingRef = useRef(false);
-  const targetIndexRef = useRef(0);
 
   useEffect(() => {
     if (reducedMotion) return;
     const el = mainRef.current;
     if (!el) return;
 
+    const sections = sectionRefs.map((r) => r.current).filter(Boolean) as HTMLElement[];
+    // Also include the third section (social links) which has no ref
     const allSections = Array.from(el.querySelectorAll(':scope > section')) as HTMLElement[];
 
     const getCurrentIndex = () => {
       const scrollTop = el.scrollTop;
+      const viewportH = el.clientHeight;
       let closest = 0;
       let minDist = Infinity;
       for (let i = 0; i < allSections.length; i++) {
@@ -168,31 +170,19 @@ export default function Home() {
       return closest;
     };
 
-    targetIndexRef.current = getCurrentIndex();
-
     const scrollToSection = (index: number) => {
       if (index < 0 || index >= allSections.length) return;
-      targetIndexRef.current = index;
       snappingRef.current = true;
       el.scrollTo({ top: allSections[index].offsetTop, behavior: 'smooth' });
       setTimeout(() => { snappingRef.current = false; }, 500);
     };
 
-    let wheelAccum = 0;
-    let wheelTimer: ReturnType<typeof setTimeout> | null = null;
-
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       if (snappingRef.current) return;
-      wheelAccum += e.deltaY;
-      if (wheelTimer) clearTimeout(wheelTimer);
-      wheelTimer = setTimeout(() => {
-        if (Math.abs(wheelAccum) > 5) {
-          const direction = wheelAccum > 0 ? 1 : -1;
-          scrollToSection(targetIndexRef.current + direction);
-        }
-        wheelAccum = 0;
-      }, 50);
+      const direction = e.deltaY > 0 ? 1 : -1;
+      const current = getCurrentIndex();
+      scrollToSection(current + direction);
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
@@ -202,16 +192,17 @@ export default function Home() {
       if (e.key === 'ArrowUp' || e.key === 'PageUp') direction = -1;
       if (direction === 0) return;
       e.preventDefault();
-      scrollToSection(targetIndexRef.current + direction);
+      scrollToSection(getCurrentIndex() + direction);
     };
 
+    // Touch handling
     let touchStartY = 0;
     const onTouchStart = (e: TouchEvent) => { touchStartY = e.touches[0].clientY; };
     const onTouchEnd = (e: TouchEvent) => {
       if (snappingRef.current) return;
       const delta = touchStartY - e.changedTouches[0].clientY;
       if (Math.abs(delta) < 50) return;
-      scrollToSection(targetIndexRef.current + (delta > 0 ? 1 : -1));
+      scrollToSection(getCurrentIndex() + (delta > 0 ? 1 : -1));
     };
 
     el.addEventListener('wheel', onWheel, { passive: false });
