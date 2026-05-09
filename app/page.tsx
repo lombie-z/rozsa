@@ -175,7 +175,6 @@ export default function Home() {
     let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
     const onScrollEnd = () => {
       canScrollRef.current = true;
-      scrollings.length = 0;
       if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
     };
     el.addEventListener('scrollend', onScrollEnd);
@@ -197,8 +196,10 @@ export default function Home() {
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      if (!canScrollRef.current) return;
 
+      // Always record deltas, even during animation lock — the
+      // acceleration filter needs the full inertia decay history
+      // so it can reject stale momentum when the lock lifts.
       const now = Date.now();
       if (now - lastWheelTime > 200) scrollings.length = 0;
       lastWheelTime = now;
@@ -206,11 +207,11 @@ export default function Home() {
       scrollings.push(Math.abs(e.deltaY));
       if (scrollings.length > 150) scrollings.splice(0, scrollings.length - 150);
 
+      if (!canScrollRef.current) return;
       if (!isAccelerating()) return;
 
       const direction = e.deltaY > 0 ? 1 : -1;
       scrollToSection(targetIndexRef.current + direction);
-      // Fallback in case scrollend doesn't fire (e.g. already at target)
       if (fallbackTimer) clearTimeout(fallbackTimer);
       fallbackTimer = setTimeout(onScrollEnd, SCROLL_SPEED + 100);
     };
