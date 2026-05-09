@@ -82,9 +82,9 @@ const LoadingScreen: FC<LoadingScreenProps> = ({ ready }) => {
         }}
       />
       <svg
+        xmlns="http://www.w3.org/2000/svg"
         viewBox={`0 0 ${GLYPH_W} ${GLYPH_H}`}
-        width={GLYPH_W}
-        height={GLYPH_H}
+        preserveAspectRatio="xMidYMid meet"
         style={{
           width: 'min(30vw, 35vh)',
           height: 'auto',
