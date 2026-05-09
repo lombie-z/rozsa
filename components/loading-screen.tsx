@@ -167,10 +167,6 @@ const LoadingScreen: FC<LoadingScreenProps> = ({ ready }) => {
         </g>
       </svg>
 
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap"
-      />
     </div>
   );
 };
