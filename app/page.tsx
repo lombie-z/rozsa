@@ -32,7 +32,7 @@ const ScanlineOverlay = dynamic(() => import('@/components/scanline-overlay'), {
   ssr: false,
 });
 
-const landingRecord = { artist: 'Isaac Rozsa', music: 'New Eye (Opens)', albumArt: '/albums/new-eye-opens.jpg', audioSrc: '/audio/new-eye-opens.mp3', isSong: true };
+const landingRecord = { artist: 'Isaac Rozsa', music: 'New Eye (Opens)', albumArt: '/albums/new-eye-opens.png', audioSrc: '/audio/new-eye-opens.mp3', isSong: true };
 
 const socialLinks = [
   { name: 'Instagram', href: 'https://instagram.com/isaacrozsa', disabled: false, icon: (
