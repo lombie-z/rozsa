@@ -32,7 +32,8 @@ const ScanlineOverlay = dynamic(() => import('@/components/scanline-overlay'), {
   ssr: false,
 });
 
-const landingRecord = { artist: 'Isaac Rozsa', music: 'New Eye (Opens)', albumArt: '/albums/new-eye-opens.png', audioSrc: '/audio/new-eye-opens.mp3', isSong: true };
+const landingRecord = { artist: 'Isaac Rozsa', music: 'Dude Like Dust', albumArt: '/albums/dude-like-dust.png', audioSrc: '/audio/dude-like-dust.mp3', isSong: true, plasticWrap: 2 as const, subjects: ['/subject3.png', '/subject3.png'] as [string, string] };
+const newEyeRecord = { artist: 'Isaac Rozsa', music: 'New Eye (Opens)', albumArt: '/albums/new-eye-opens.png', audioSrc: '/audio/new-eye-opens.mp3', isSong: true, plasticWrap: 1 as const, subjects: ['/subject.png', '/subject2.png'] as [string, string] };
 
 const socialLinks = [
   { name: 'Instagram', href: 'https://instagram.com/isaacrozsa', disabled: false, icon: (
@@ -122,6 +123,9 @@ export default function Home() {
   const mainRef = useRef<HTMLElement>(null);
   const landingRef = useRef<HTMLElement>(null);
   const rozsaRef = useRef<HTMLElement>(null);
+  const newEyeRef = useRef<HTMLElement>(null);
+  const [newEyeVisible, setNewEyeVisible] = useState(false);
+  const [newEyeShaderMounted, setNewEyeShaderMounted] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [waterReady, setWaterReady] = useState(false);
   const [albumReady, setAlbumReady] = useState(false);
@@ -131,6 +135,24 @@ export default function Home() {
   useEffect(() => {
     const timer = setTimeout(() => { setWaterReady(true); setAlbumReady(true); }, 5000);
     return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const el = newEyeRef.current;
+    if (!el) return;
+    let unmountTimer: ReturnType<typeof setTimeout> | null = null;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        if (unmountTimer) { clearTimeout(unmountTimer); unmountTimer = null; }
+        setNewEyeShaderMounted(true);
+        requestAnimationFrame(() => setNewEyeVisible(true));
+      } else {
+        setNewEyeVisible(false);
+        unmountTimer = setTimeout(() => setNewEyeShaderMounted(false), 1000);
+      }
+    }, { threshold: 0.1 });
+    observer.observe(el);
+    return () => { observer.disconnect(); if (unmountTimer) clearTimeout(unmountTimer); };
   }, []);
 
   const isMobile = useIsMobile();
@@ -433,7 +455,7 @@ export default function Home() {
             scale: albumScale,
           }}
         >
-          <MusicArtwork artist={landingRecord.artist} music={landingRecord.music} albumArt={landingRecord.albumArt} audioSrc={landingRecord.audioSrc} isSong={landingRecord.isSong} priority onImageReady={() => setAlbumReady(true)} />
+          <MusicArtwork artist={landingRecord.artist} music={landingRecord.music} albumArt={landingRecord.albumArt} audioSrc={landingRecord.audioSrc} isSong={landingRecord.isSong} plasticWrap={landingRecord.plasticWrap} subjects={landingRecord.subjects} priority onImageReady={() => setAlbumReady(true)} />
         </motion.div>
       </section>
 
@@ -442,7 +464,30 @@ export default function Home() {
         <ShaderScene lowQuality={isMobile} />
       </section>
 
-      {/* Page 2 - Social Links + Photos */}
+      {/* Page 2 - New Eye (Opens) */}
+      <section ref={newEyeRef} className='h-[100dvh] w-full bg-black flex items-center justify-center relative overflow-hidden'>
+        {newEyeShaderMounted && (
+          <div className='absolute inset-0 z-0 transition-opacity duration-[5000ms]' style={{ opacity: newEyeVisible ? 0.4 : 0 }}>
+            <Canvas
+              orthographic
+              camera={{ zoom: 1, position: [0, 0, 1], near: 0.1, far: 1000 }}
+              gl={{ alpha: true, antialias: false }}
+              style={{ width: '100%', height: '100%' }}
+              dpr={[1, 1]}
+              frameloop='always'
+            >
+              <FluidOverlay light />
+            </Canvas>
+          </div>
+        )}
+        <div className='absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-black to-transparent pointer-events-none z-10' />
+        <div className='absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black to-transparent pointer-events-none z-10' />
+        <div className='relative z-20'>
+          <MusicArtwork artist={newEyeRecord.artist} music={newEyeRecord.music} albumArt={newEyeRecord.albumArt} audioSrc={newEyeRecord.audioSrc} isSong={newEyeRecord.isSong} plasticWrap={newEyeRecord.plasticWrap} subjects={newEyeRecord.subjects} />
+        </div>
+      </section>
+
+      {/* Page 3 - Social Links + Photos */}
       <section className='h-[100dvh] w-full bg-[#030304] flex'>
         {/* Social links — own column, ~1/3 width */}
         <div className='w-1/3 shrink-0 flex flex-col justify-center items-center gap-6'>
