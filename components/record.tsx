@@ -23,13 +23,15 @@ interface MusicArtworkProps {
   music: string;
   albumArt: string;
   isSong: boolean;
+  plasticWrap?: 1 | 2 | 3;
+  subjects?: [string] | [string, string];
   audioSrc?: string;
   isLoading?: boolean;
   priority?: boolean;
   onImageReady?: () => void;
 }
 
-export default function MusicArtwork({ artist, music, albumArt, isSong, audioSrc, isLoading = false, priority = false, onImageReady }: MusicArtworkProps) {
+export default function MusicArtwork({ artist, music, albumArt, isSong, plasticWrap, subjects, audioSrc, isLoading = false, priority = false, onImageReady }: MusicArtworkProps) {
   // Stable ID for this record used to coordinate "one playing at a time"
   const recordId = `${artist}—${music}`;
   const { playingId, setPlayingId, volume } = usePlaying();
@@ -294,36 +296,54 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, audioSrc
                 height={80}
                 className='w-full h-full object-contain'
               />
-              <div className={`absolute inset-0 transition-opacity duration-700 ${isPlaying ? 'opacity-100' : 'opacity-0'}`}>
-                {/* Subject 1 — top */}
-                <div className='absolute inset-0 flex items-center justify-center'>
-                  <div className='w-[50%] h-[50%] -translate-y-[35%] relative'>
-                    <div className='absolute inset-0 rounded-full overflow-hidden -translate-x-[8%] opacity-30'>
-                      <Image src='/subject.png' alt='' width={200} height={200} className='w-full h-full object-cover object-top' style={{ filter: 'brightness(0.4) sepia(1) saturate(10) hue-rotate(340deg)' }} />
-                    </div>
-                    <div className='absolute inset-0 rounded-full overflow-hidden translate-x-[8%] opacity-30'>
-                      <Image src='/subject.png' alt='' width={200} height={200} className='w-full h-full object-cover object-top' style={{ filter: 'brightness(0.4) sepia(1) saturate(10) hue-rotate(340deg)' }} />
-                    </div>
-                    <div className='absolute inset-0 rounded-full overflow-hidden opacity-70'>
-                      <Image ref={subject1Ref} src='/subject.png' alt='' width={200} height={200} className='w-full h-full object-cover object-top' />
-                    </div>
-                  </div>
-                </div>
-                {/* Subject 2 — bottom */}
-                <div className='absolute inset-0 flex items-center justify-center'>
-                  <div className='w-[50%] h-[50%] translate-y-[35%] relative'>
-                    <div className='absolute inset-0 rounded-full overflow-hidden -translate-x-[8%] opacity-30'>
-                      <Image src='/subject2.png' alt='' width={200} height={200} className='w-full h-full object-cover object-top -scale-y-100' style={{ filter: 'brightness(0.4) sepia(1) saturate(10) hue-rotate(340deg)' }} />
-                    </div>
-                    <div className='absolute inset-0 rounded-full overflow-hidden translate-x-[8%] opacity-30'>
-                      <Image src='/subject2.png' alt='' width={200} height={200} className='w-full h-full object-cover object-top -scale-y-100' style={{ filter: 'brightness(0.4) sepia(1) saturate(10) hue-rotate(340deg)' }} />
-                    </div>
-                    <div className='absolute inset-0 rounded-full overflow-hidden opacity-70'>
-                      <Image ref={subject2Ref} src='/subject2.png' alt='' width={200} height={200} className='w-full h-full object-cover object-top -scale-y-100' />
+              {subjects && <div className={`absolute inset-0 transition-opacity duration-700 ${isPlaying ? 'opacity-100' : 'opacity-0'}`}>
+                {subjects.length === 1 ? (
+                  <div className='absolute inset-0 flex items-center justify-center'>
+                    <div className='w-[40%] h-[40%] -translate-y-[55%] relative'>
+                      <div className='absolute inset-0 overflow-hidden -translate-x-[8%] opacity-30'>
+                        <Image src={subjects[0]} alt='' width={200} height={200} className='w-full h-full object-contain' style={{ filter: 'brightness(0.4) sepia(1) saturate(10) hue-rotate(340deg)' }} />
+                      </div>
+                      <div className='absolute inset-0 overflow-hidden translate-x-[8%] opacity-30'>
+                        <Image src={subjects[0]} alt='' width={200} height={200} className='w-full h-full object-contain' style={{ filter: 'brightness(0.4) sepia(1) saturate(10) hue-rotate(340deg)' }} />
+                      </div>
+                      <div className='absolute inset-0 overflow-hidden opacity-70'>
+                        <Image ref={subject1Ref} src={subjects[0]} alt='' width={200} height={200} className='w-full h-full object-contain' />
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
+                ) : (
+                  <>
+                    {/* Subject 1 — top */}
+                    <div className='absolute inset-0 flex items-center justify-center'>
+                      <div className='w-[60%] h-[60%] -translate-y-[30%] relative'>
+                        <div className='absolute inset-0 rounded-full overflow-hidden -translate-x-[8%] opacity-30'>
+                          <Image src={subjects[0]} alt='' width={200} height={200} className='w-full h-full object-contain' style={{ filter: 'brightness(0.4) sepia(1) saturate(10) hue-rotate(340deg)' }} />
+                        </div>
+                        <div className='absolute inset-0 rounded-full overflow-hidden translate-x-[8%] opacity-30'>
+                          <Image src={subjects[0]} alt='' width={200} height={200} className='w-full h-full object-contain' style={{ filter: 'brightness(0.4) sepia(1) saturate(10) hue-rotate(340deg)' }} />
+                        </div>
+                        <div className='absolute inset-0 rounded-full overflow-hidden opacity-70'>
+                          <Image ref={subject1Ref} src={subjects[0]} alt='' width={200} height={200} className='w-full h-full object-contain' />
+                        </div>
+                      </div>
+                    </div>
+                    {/* Subject 2 — bottom */}
+                    <div className='absolute inset-0 flex items-center justify-center'>
+                      <div className='w-[60%] h-[60%] translate-y-[30%] relative'>
+                        <div className='absolute inset-0 rounded-full overflow-hidden -translate-x-[8%] opacity-30'>
+                          <Image src={subjects[1]} alt='' width={200} height={200} className='w-full h-full object-contain -scale-y-100 -scale-x-100' style={{ filter: 'brightness(0.4) sepia(1) saturate(10) hue-rotate(340deg)' }} />
+                        </div>
+                        <div className='absolute inset-0 rounded-full overflow-hidden translate-x-[8%] opacity-30'>
+                          <Image src={subjects[1]} alt='' width={200} height={200} className='w-full h-full object-contain -scale-y-100 -scale-x-100' style={{ filter: 'brightness(0.4) sepia(1) saturate(10) hue-rotate(340deg)' }} />
+                        </div>
+                        <div className='absolute inset-0 rounded-full overflow-hidden opacity-70'>
+                          <Image ref={subject2Ref} src={subjects[1]} alt='' width={200} height={200} className='w-full h-full object-contain -scale-y-100 -scale-x-100' />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>}
             </div>
           </div>
         </div>
@@ -331,7 +351,7 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, audioSrc
         {/* Album artwork */}
         <div
           ref={cardRef}
-          className='relative overflow-hidden shadow-2xl transition-all duration-300 ease-out hover:scale-105 hover:shadow-3xl cursor-pointer w-44 h-44 sm:w-72 sm:h-72'
+          className='relative overflow-hidden shadow-2xl transition-all duration-300 ease-out cursor-pointer w-44 h-44 sm:w-72 sm:h-72'
           style={{ touchAction: 'manipulation' }}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
@@ -343,7 +363,7 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, audioSrc
             alt={`${music} Cover`}
             width={256}
             height={256}
-            className={`w-full h-full object-cover transition-all duration-300 ease-out group-hover:scale-110 ${!imageLoaded ? 'opacity-0' : 'opacity-100'}`}
+            className={`w-full h-full object-cover transition-all duration-300 ease-out ${!imageLoaded ? 'opacity-0' : 'opacity-100'}`}
             onLoad={() => { setImageLoaded(true); onImageReady?.(); }}
             onError={() => {
               setImageLoaded(true);
@@ -351,8 +371,23 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, audioSrc
             priority={priority}
           />
 
+          {/* Plastic wrap overlay */}
+          {plasticWrap && (
+            <div className='absolute inset-0 pointer-events-none mix-blend-screen opacity-80'>
+              <Image
+                src={`/textures/plastic-wrap-${plasticWrap}.jpg`}
+                alt=''
+                fill
+                className='object-cover'
+              />
+            </div>
+          )}
+
           {/* Loading state overlay */}
           {!imageLoaded && <div className='absolute inset-0 bg-neutral-900 animate-pulse' />}
+
+          {/* Hover/active gradient overlay */}
+          <div className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 via-40% to-transparent transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`} />
 
           {/* Play/Pause button + artist info */}
           <div className={`absolute bottom-2 left-2 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
@@ -376,9 +411,6 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, audioSrc
               </div>
             </div>
           </div>
-
-          {/* Hover/active gradient overlay */}
-          <div className={`absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`} />
         </div>
       </div>
     </div>
