@@ -32,8 +32,8 @@ const ScanlineOverlay = dynamic(() => import('@/components/scanline-overlay'), {
   ssr: false,
 });
 
-const landingRecord = { artist: 'Isaac Rozsa', music: 'Dude Like Dust', albumArt: '/albums/dude-like-dust.png', audioSrc: '/audio/dude-like-dust.mp3', isSong: true, plasticWrap: 2 as const, subjects: ['/subject3.png', '/subject3.png'] as [string, string] };
-const newEyeRecord = { artist: 'Isaac Rozsa', music: 'New Eye (Opens)', albumArt: '/albums/new-eye-opens.png', audioSrc: '/audio/new-eye-opens.mp3', isSong: true, plasticWrap: 1 as const, subjects: ['/subject.png', '/subject2.png'] as [string, string] };
+const landingRecord = { artist: 'Isaac Rozsa', music: 'New Eye (Opens)', albumArt: '/albums/new-eye-opens.png', audioSrc: '/audio/new-eye-opens.mp3', isSong: true, plasticWrap: 1 as const, subjects: ['/subject.png', '/subject2.png'] as [string, string] };
+const newEyeRecord = { artist: 'Isaac Rozsa', music: 'Dude Like Dust', albumArt: '/albums/dude-like-dust.png', audioSrc: '/audio/dude-like-dust.mp3', isSong: true, plasticWrap: 2 as const, subjects: ['/subject3.png', '/subject3.png'] as [string, string] };
 
 const socialLinks = [
   { name: 'Instagram', href: 'https://instagram.com/isaacrozsa', disabled: false, icon: (
@@ -476,7 +476,7 @@ export default function Home() {
               dpr={[1, 1]}
               frameloop='always'
             >
-              <FluidOverlay light />
+              <FluidOverlay blue />
             </Canvas>
           </div>
         )}
