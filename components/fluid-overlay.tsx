@@ -225,12 +225,34 @@ void main() {
   float shape = smoothstep(-0.2, 0.6, f);
   shape *= smoothstep(-0.4, 0.3, f + 0.1 * snoise(suv * 3.0 + t));
 
-  vec3 color = vec3(0.0, 0.02, 0.08);
-  color = mix(color, vec3(0.0, 0.55, 0.85), shape * 0.8);
-  color += vec3(0.0, 0.75, 1.0) * smoothstep(0.3, 0.8, f) * 0.3;
+  // Mostly icy, with horizontal blue streaks bleeding left from cube center
+  float cy = abs(vUv.y - 0.5);
+  // Wider vertical band matching cube height
+  float verticalMask = 1.0 - smoothstep(0.08, 0.3, cy);
+  // Blue starts bright at cube center, holds strong, then fades toward left edge
+  float leftMask = smoothstep(-0.1, 0.35, vUv.x) * (1.0 - smoothstep(0.55, 0.7, vUv.x));
+  // Horizontal streaks via stretched noise, more diffused
+  float streaks = snoise(vec2(vUv.x * 1.5 - t * 3.0, vUv.y * 5.0)) * 0.5 + 0.5;
+  streaks = smoothstep(0.2, 0.8, streaks);
+  // blend = 1 is icy, 0 is blue
+  float blend = 1.0 - (leftMask * verticalMask * streaks * 0.9);
+  blend = clamp(blend, 0.0, 1.0);
+
+  vec3 deepBase = vec3(0.0, 0.12, 0.18);
+  vec3 icyBase  = vec3(0.06, 0.06, 0.08);
+  vec3 deepMid  = vec3(0.0, 0.75, 0.90);
+  vec3 icyMid   = vec3(0.12, 0.13, 0.15);
+  vec3 deepHi   = vec3(0.0, 0.86, 1.0);
+  vec3 icyHi    = vec3(0.16, 0.17, 0.20);
+  vec3 deepEdge = vec3(0.0, 0.90, 1.0);
+  vec3 icyEdge  = vec3(0.20, 0.21, 0.24);
+
+  vec3 color = mix(deepBase, icyBase, blend);
+  color = mix(color, mix(deepMid, icyMid, blend), shape * 0.9);
+  color += mix(deepHi, icyHi, blend) * smoothstep(0.3, 0.8, f) * 0.4;
 
   float edge = smoothstep(0.25, 0.35, shape) - smoothstep(0.35, 0.55, shape);
-  color += vec3(0.0, 0.85, 1.0) * edge * 0.4;
+  color += mix(deepEdge, icyEdge, blend) * edge * 0.5;
 
   float alpha = shape * 0.35;
 
