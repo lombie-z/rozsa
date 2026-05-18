@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { usePlaying } from '@/lib/playing-context';
 
@@ -258,20 +259,22 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, plasticW
       {/* Component-specific styles */}
       <style jsx>{componentStyles}</style>
 
-      {/* Tooltip that follows cursor - desktop only */}
-      {isHovered && (
+      {/* Tooltip that follows cursor - portaled to body to escape 3D transform contexts */}
+      {typeof document !== 'undefined' && createPortal(
         <div
-          className='fixed z-50 pointer-events-none hidden sm:block'
+          className='fixed z-50 pointer-events-none hidden sm:block transition-all duration-300 ease-out'
           style={{
             left: mousePosition.x,
             top: mousePosition.y,
-            transform: 'translateZ(0)',
+            opacity: isHovered ? 1 : 0,
+            transform: isHovered ? 'translateY(0)' : 'translateY(6px)',
           }}
         >
-          <div className='bg-neutral-900/90 backdrop-blur-md text-white px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap shadow-lg border border-neutral-700/50 animate-in fade-in zoom-in-95 duration-200'>
+          <div className='bg-neutral-900/90 backdrop-blur-md text-white px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap shadow-lg border border-neutral-700/50'>
             {music}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* Main container */}

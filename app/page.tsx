@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { Canvas } from '@react-three/fiber';
 import MusicArtwork from '@/components/record';
+import IceCube from '@/components/ice-cube';
 import LoadingScreen from '@/components/loading-screen';
 import { useIsMobile, usePrefersReducedMotion } from '@/lib/use-mobile';
 import { PlayingProvider, usePlaying } from '@/lib/playing-context';
@@ -483,7 +484,9 @@ export default function Home() {
         <div className='absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-black to-transparent pointer-events-none z-10' />
         <div className='absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black to-transparent pointer-events-none z-10' />
         <div className='relative z-20'>
-          <MusicArtwork artist={newEyeRecord.artist} music={newEyeRecord.music} albumArt={newEyeRecord.albumArt} audioSrc={newEyeRecord.audioSrc} isSong={newEyeRecord.isSong} plasticWrap={newEyeRecord.plasticWrap} subjects={newEyeRecord.subjects} />
+          <IceCube>
+            <MusicArtwork artist={newEyeRecord.artist} music={newEyeRecord.music} albumArt={newEyeRecord.albumArt} audioSrc={newEyeRecord.audioSrc} isSong={newEyeRecord.isSong} plasticWrap={newEyeRecord.plasticWrap} subjects={newEyeRecord.subjects} />
+          </IceCube>
         </div>
       </section>
 
