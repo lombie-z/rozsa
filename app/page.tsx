@@ -334,6 +334,18 @@ export default function Home() {
 
   return (
     <PlayingProvider>
+    {/* Film grain overlay — covers whole site, ignores pointer events */}
+    <div className='fixed inset-0 z-[60] pointer-events-none' style={{ opacity: 0.08, mixBlendMode: 'screen' }}>
+      <svg width='0' height='0' style={{ position: 'absolute' }}>
+        <defs>
+          <filter id='site-grain'>
+            <feTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch' />
+            <feColorMatrix type='saturate' values='0' />
+          </filter>
+        </defs>
+      </svg>
+      <div className='w-full h-full' style={{ filter: 'url(#site-grain)' }} />
+    </div>
     {/* Top-right controls */}
     <div className='fixed top-6 right-6 z-50 flex flex-col items-end gap-3'>
       <button
@@ -468,7 +480,7 @@ export default function Home() {
       {/* Page 2 - New Eye (Opens) */}
       <section ref={newEyeRef} className='h-[100dvh] w-full bg-black flex items-center justify-center relative overflow-hidden'>
         {newEyeShaderMounted && (
-          <div className='absolute inset-0 z-0 transition-opacity duration-[5000ms]' style={{ opacity: newEyeVisible ? 0.4 : 0 }}>
+          <div className='absolute inset-0 z-0 transition-opacity duration-[5000ms]' style={{ opacity: newEyeVisible ? 1 : 0 }}>
             <Canvas
               orthographic
               camera={{ zoom: 1, position: [0, 0, 1], near: 0.1, far: 1000 }}
@@ -481,8 +493,8 @@ export default function Home() {
             </Canvas>
           </div>
         )}
-        <div className='absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-black to-transparent pointer-events-none z-10' />
-        <div className='absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black to-transparent pointer-events-none z-10' />
+        <div className='absolute inset-x-0 top-0 h-2/5 bg-gradient-to-b from-black via-black/50 to-transparent pointer-events-none z-10' />
+        <div className='absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black via-black/50 to-transparent pointer-events-none z-10' />
         <div className='relative z-20'>
           <IceCube>
             <MusicArtwork artist={newEyeRecord.artist} music={newEyeRecord.music} albumArt={newEyeRecord.albumArt} audioSrc={newEyeRecord.audioSrc} isSong={newEyeRecord.isSong} plasticWrap={newEyeRecord.plasticWrap} subjects={newEyeRecord.subjects} />
@@ -490,10 +502,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Page 3 - Social Links + Photos */}
-      <section className='h-[100dvh] w-full bg-[#030304] flex'>
-        {/* Social links — own column, ~1/3 width */}
-        <div className='w-1/3 shrink-0 flex flex-col justify-center items-center gap-6'>
+      {/* Page 3 - Social Links */}
+      <section className='h-[100dvh] w-full bg-black flex items-center justify-center'>
+        <div className='flex flex-col sm:flex-row items-center gap-8 sm:gap-10'>
           {socialLinks.map((link) => (
             <a
               key={link.name}
@@ -511,45 +522,17 @@ export default function Home() {
                 {link.icon}
               </span>
               {link.disabled && (
-                <span className='absolute left-full ml-3 top-1/2 -translate-y-1/2 text-xs text-white/30 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300'>
+                <span className='absolute left-1/2 -translate-x-1/2 top-full mt-2 text-xs text-white/30 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300'>
                   coming soon
                 </span>
               )}
               {link.copyEmail && copied && (
-                <span className='absolute left-full ml-3 top-1/2 -translate-y-1/2 text-xs text-white/30 whitespace-nowrap transition-opacity duration-300'>
+                <span className='absolute left-1/2 -translate-x-1/2 top-full mt-2 text-xs text-white/30 whitespace-nowrap transition-opacity duration-300'>
                   copied
                 </span>
               )}
             </a>
           ))}
-        </div>
-        {/* Photos — remaining 2/3, flex for hover expand */}
-        <div className='flex-1 relative flex min-w-0 overflow-hidden opacity-20'>
-          {['/photos/railing.jpg', '/photos/spider.jpg', '/photos/sunset.jpg'].map((src, i) => (
-            <div key={src} className='relative flex-1 h-full overflow-hidden'>
-              <Image
-                src={src} alt='' width={600} height={900} unoptimized
-                className='absolute top-0 left-1/2 -translate-x-1/2 h-full w-auto max-w-none'
-                style={{ maskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)' }}
-              />
-              <div className='absolute inset-0 z-20 pointer-events-none'>
-                <Canvas
-                  orthographic
-                  camera={{ zoom: 1, position: [0, 0, 1], near: 0.1, far: 1000 }}
-                  gl={{ alpha: true, antialias: false }}
-                  style={{ width: '100%', height: '100%' }}
-                  dpr={[1, 1]}
-                  frameloop='always'
-                >
-                  {i === 0 && <GrainOverlay />}
-                  {i === 1 && <ScanlineOverlay />}
-                  {i === 2 && <FluidOverlay />}
-                </Canvas>
-              </div>
-            </div>
-          ))}
-          {/* Black fade from top */}
-          <div className='absolute inset-x-0 top-0 h-2/3 bg-gradient-to-b from-black via-black/60 to-transparent pointer-events-none z-10' />
         </div>
       </section>
     </main>

@@ -43,6 +43,7 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, plasticW
   const [isTouched, setIsTouched] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const vinylRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -62,6 +63,7 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, plasticW
   const isPlayingRef = useRef(false);
 
   useEffect(() => {
+    setMounted(true);
     setIsTouchDevice(window.matchMedia('(pointer: coarse)').matches);
   }, []);
 
@@ -260,7 +262,7 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, plasticW
       <style jsx>{componentStyles}</style>
 
       {/* Tooltip that follows cursor - portaled to body to escape 3D transform contexts */}
-      {typeof document !== 'undefined' && createPortal(
+      {mounted && createPortal(
         <div
           className='fixed z-50 pointer-events-none hidden sm:block transition-all duration-300 ease-out'
           style={{
