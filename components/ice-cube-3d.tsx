@@ -72,7 +72,7 @@ interface Props {
 export default function IceCube3D({ tiltRef }: Props) {
   const { scene } = useGLTF('/models/ice_cube.glb');
   const groupRef = useRef<THREE.Group>(null);
-  const materialRef = useRef<THREE.ShaderMaterial>(null);
+  const materialRef = useRef<THREE.ShaderMaterial | null>(null);
 
   const iceMaterial = useMemo(() => {
     const mat = new THREE.ShaderMaterial({
