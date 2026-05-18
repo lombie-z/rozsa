@@ -238,13 +238,14 @@ void main() {
   float blend = 1.0 - (leftMask * verticalMask * streaks * 0.9);
   blend = clamp(blend, 0.0, 1.0);
 
-  vec3 deepBase = vec3(0.0, 0.12, 0.18);
+  // Red streaks with occasional cyan reflections
+  vec3 deepBase = vec3(0.18, 0.02, 0.02);
   vec3 icyBase  = vec3(0.06, 0.06, 0.08);
-  vec3 deepMid  = vec3(0.0, 0.75, 0.90);
+  vec3 deepMid  = vec3(0.8, 0.1, 0.08);
   vec3 icyMid   = vec3(0.12, 0.13, 0.15);
-  vec3 deepHi   = vec3(0.0, 0.86, 1.0);
+  vec3 deepHi   = vec3(1.0, 0.15, 0.1);
   vec3 icyHi    = vec3(0.16, 0.17, 0.20);
-  vec3 deepEdge = vec3(0.0, 0.90, 1.0);
+  vec3 deepEdge = vec3(1.0, 0.2, 0.15);
   vec3 icyEdge  = vec3(0.20, 0.21, 0.24);
 
   vec3 color = mix(deepBase, icyBase, blend);
@@ -253,6 +254,11 @@ void main() {
 
   float edge = smoothstep(0.25, 0.35, shape) - smoothstep(0.35, 0.55, shape);
   color += mix(deepEdge, icyEdge, blend) * edge * 0.5;
+
+  // Cyan reflection patches — small, sparse, like light catching ice
+  float cyanNoise = snoise(vec2(vUv.x * 6.0 + t * 1.5, vUv.y * 4.0 - t * 0.8));
+  float cyanMask = smoothstep(0.55, 0.75, cyanNoise) * verticalMask * leftMask;
+  color += vec3(0.0, 0.7, 0.9) * cyanMask * 0.3;
 
   float alpha = shape * 0.35;
 

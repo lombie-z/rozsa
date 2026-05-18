@@ -6,7 +6,6 @@ import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { Canvas } from '@react-three/fiber';
 import MusicArtwork from '@/components/record';
-import IceCube from '@/components/ice-cube';
 import LoadingScreen from '@/components/loading-screen';
 import { useIsMobile, usePrefersReducedMotion } from '@/lib/use-mobile';
 import { PlayingProvider, usePlaying } from '@/lib/playing-context';
@@ -30,6 +29,10 @@ const GrainOverlay = dynamic(() => import('@/components/grain-overlay'), {
 });
 
 const ScanlineOverlay = dynamic(() => import('@/components/scanline-overlay'), {
+  ssr: false,
+});
+
+const IceCube3D = dynamic(() => import('@/components/ice-cube-3d'), {
   ssr: false,
 });
 
@@ -125,6 +128,8 @@ export default function Home() {
   const landingRef = useRef<HTMLElement>(null);
   const rozsaRef = useRef<HTMLElement>(null);
   const newEyeRef = useRef<HTMLElement>(null);
+  const iceTiltRef = useRef({ rx: 0, ry: 0 });
+  const albumWrapRef = useRef<HTMLDivElement>(null);
   const [newEyeVisible, setNewEyeVisible] = useState(false);
   const [newEyeShaderMounted, setNewEyeShaderMounted] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -158,6 +163,32 @@ export default function Home() {
 
   const isMobile = useIsMobile();
   const reducedMotion = usePrefersReducedMotion();
+
+  // Shared cursor tracking for ice cube + album rotation
+  useEffect(() => {
+    let raf: number | null = null;
+    const onMove = (e: MouseEvent) => {
+      const x = (e.clientX / window.innerWidth - 0.5) * 2;
+      const y = (e.clientY / window.innerHeight - 0.5) * 2;
+      iceTiltRef.current = { rx: -y * 0.25, ry: x * 0.3 };
+      if (!raf) {
+        raf = requestAnimationFrame(() => {
+          if (albumWrapRef.current) {
+            const { rx, ry } = iceTiltRef.current;
+            const ryDeg = (ry * 180) / Math.PI;
+            const rxDeg = -(rx * 180) / Math.PI;
+            albumWrapRef.current.style.transform = `perspective(900px) rotateY(${ryDeg}deg) rotateX(${rxDeg}deg)`;
+          }
+          raf = null;
+        });
+      }
+    };
+    window.addEventListener('mousemove', onMove, { passive: true });
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
 
   // Calculate scroll progress between landing and ROZSA pages
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -478,9 +509,9 @@ export default function Home() {
       </section>
 
       {/* Page 2 - New Eye (Opens) */}
-      <section ref={newEyeRef} className='h-[100dvh] w-full bg-black flex items-center justify-center relative overflow-hidden'>
+      <section ref={newEyeRef} className='h-[100dvh] w-full bg-black flex items-center justify-center relative'>
         {newEyeShaderMounted && (
-          <div className='absolute inset-0 z-0 transition-opacity duration-[5000ms]' style={{ opacity: newEyeVisible ? 1 : 0 }}>
+          <div className='absolute inset-0 z-0 overflow-hidden transition-opacity duration-[5000ms]' style={{ opacity: newEyeVisible ? 1 : 0 }}>
             <Canvas
               orthographic
               camera={{ zoom: 1, position: [0, 0, 1], near: 0.1, far: 1000 }}
@@ -496,9 +527,32 @@ export default function Home() {
         <div className='absolute inset-x-0 top-0 h-2/5 bg-gradient-to-b from-black via-black/50 to-transparent pointer-events-none z-10' />
         <div className='absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black via-black/50 to-transparent pointer-events-none z-10' />
         <div className='relative z-20'>
-          <IceCube>
-            <MusicArtwork artist={newEyeRecord.artist} music={newEyeRecord.music} albumArt={newEyeRecord.albumArt} audioSrc={newEyeRecord.audioSrc} isSong={newEyeRecord.isSong} plasticWrap={newEyeRecord.plasticWrap} subjects={newEyeRecord.subjects} />
-          </IceCube>
+          <div className='relative'>
+            {/* Album — CSS 3D rotation matches the Three.js cube */}
+            <div ref={albumWrapRef} className='relative z-50 translate-x-3 sm:translate-x-4 scale-[0.85] sm:scale-90' style={{ transition: 'transform 0.3s ease-out' }}>
+              <MusicArtwork artist={newEyeRecord.artist} music={newEyeRecord.music} albumArt={newEyeRecord.albumArt} audioSrc={newEyeRecord.audioSrc} isSong={newEyeRecord.isSong} plasticWrap={newEyeRecord.plasticWrap} subjects={newEyeRecord.subjects} frosted />
+            </div>
+            {/* Ice cube canvas — pointer-events off so album stays interactive */}
+            <div className='absolute -inset-28 sm:-inset-40 z-40 pointer-events-none'>
+              <Canvas
+                camera={{ position: [0, 0, 5], fov: 40 }}
+                gl={{ alpha: true, antialias: true }}
+                style={{ width: '100%', height: '100%' }}
+                dpr={canvasDpr}
+                frameloop='always'
+                onCreated={({ gl }) => {
+                  gl.domElement.style.pointerEvents = 'none';
+                  gl.domElement.style.touchAction = 'auto';
+                  if (gl.domElement.parentElement) {
+                    gl.domElement.parentElement.style.pointerEvents = 'none';
+                    gl.domElement.parentElement.style.touchAction = 'auto';
+                  }
+                }}
+              >
+                <IceCube3D tiltRef={iceTiltRef} />
+              </Canvas>
+            </div>
+          </div>
         </div>
       </section>
 

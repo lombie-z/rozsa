@@ -30,9 +30,43 @@ interface MusicArtworkProps {
   isLoading?: boolean;
   priority?: boolean;
   onImageReady?: () => void;
+  frosted?: boolean;
 }
 
-export default function MusicArtwork({ artist, music, albumArt, isSong, plasticWrap, subjects, audioSrc, isLoading = false, priority = false, onImageReady }: MusicArtworkProps) {
+const FROST_AREAS = 25;
+const FROST_COUNT = FROST_AREAS * FROST_AREAS;
+
+const frostStyles = `
+  .frost-card {
+    filter: url(#frost-card-filter);
+  }
+  .frost-card-grid {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    display: grid;
+    grid-template-columns: repeat(${FROST_AREAS}, 1fr);
+    background: #000;
+    filter: blur(19px) brightness(5) contrast(80) invert(1) blur(5px) url(#frost-card-gray-pack) url(#frost-card-pack-lower);
+    mix-blend-mode: plus-lighter;
+    pointer-events: none;
+  }
+  .frost-card-grid i {
+    display: block;
+    background: #fff;
+    opacity: 0;
+    transition: opacity 4s;
+    border-radius: 50%;
+    scale: 2;
+    pointer-events: auto;
+  }
+  .frost-card-grid i:is(:hover, :active) {
+    opacity: 1;
+    transition-duration: 0s;
+  }
+`;
+
+export default function MusicArtwork({ artist, music, albumArt, isSong, plasticWrap, subjects, audioSrc, isLoading = false, priority = false, onImageReady, frosted = false }: MusicArtworkProps) {
   // Stable ID for this record used to coordinate "one playing at a time"
   const recordId = `${artist}—${music}`;
   const { playingId, setPlayingId, volume } = usePlaying();
@@ -354,9 +388,10 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, plasticW
         </div>
 
         {/* Album artwork */}
+        {frosted && <style>{frostStyles}</style>}
         <div
           ref={cardRef}
-          className='relative overflow-hidden shadow-2xl transition-all duration-300 ease-out cursor-pointer w-44 h-44 sm:w-72 sm:h-72'
+          className={`relative overflow-hidden shadow-2xl transition-all duration-300 ease-out cursor-pointer w-44 h-44 sm:w-72 sm:h-72 ${frosted ? 'frost-card' : ''}`}
           style={{ touchAction: 'manipulation' }}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
@@ -416,6 +451,54 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, plasticW
               </div>
             </div>
           </div>
+
+          {/* Frosted hover grid + SVG filter defs */}
+          {frosted && (
+            <>
+              <aside className='frost-card-grid' aria-hidden='true'>
+                {Array.from({ length: FROST_COUNT }).map((_, i) => (
+                  <i key={i} />
+                ))}
+              </aside>
+              <svg width='0' height='0' style={{ position: 'absolute' }}>
+                <defs>
+                  <filter id='frost-card-filter' primitiveUnits='userSpaceOnUse' x='0%' y='0%' width='120%' height='120%'>
+                    <feComponentTransfer result='bg' in='SourceGraphic'>
+                      <feFuncR type='discrete' tableValues='0.000 0.016 0.032 0.048 0.063 0.079 0.095 0.111 0.127 0.143 0.159 0.175 0.190 0.206 0.222 0.238 0.254 0.270 0.286 0.302 0.317 0.333 0.349 0.365 0.381 0.397 0.413 0.429 0.444 0.460 0.476 0.492 0.508 0.524 0.540 0.556 0.571 0.587 0.603 0.619 0.635 0.651 0.667 0.683 0.698 0.714 0.730 0.746 0.762 0.778 0.794 0.810 0.825 0.841 0.857 0.873 0.889 0.905 0.921 0.937 0.952 0.968 0.984 1.000' />
+                      <feFuncG type='discrete' tableValues='0.000 0.016 0.032 0.048 0.063 0.079 0.095 0.111 0.127 0.143 0.159 0.175 0.190 0.206 0.222 0.238 0.254 0.270 0.286 0.302 0.317 0.333 0.349 0.365 0.381 0.397 0.413 0.429 0.444 0.460 0.476 0.492 0.508 0.524 0.540 0.556 0.571 0.587 0.603 0.619 0.635 0.651 0.667 0.683 0.698 0.714 0.730 0.746 0.762 0.778 0.794 0.810 0.825 0.841 0.857 0.873 0.889 0.905 0.921 0.937 0.952 0.968 0.984 1.000' />
+                      <feFuncB type='discrete' tableValues='0.000 0.016 0.032 0.048 0.063 0.079 0.095 0.111 0.127 0.143 0.159 0.175 0.190 0.206 0.222 0.238 0.254 0.270 0.286 0.302 0.317 0.333 0.349 0.365 0.381 0.397 0.413 0.429 0.444 0.460 0.476 0.492 0.508 0.524 0.540 0.556 0.571 0.587 0.603 0.619 0.635 0.651 0.667 0.683 0.698 0.714 0.730 0.746 0.762 0.778 0.794 0.810 0.825 0.841 0.857 0.873 0.889 0.905 0.921 0.937 0.952 0.968 0.984 1.000' />
+                    </feComponentTransfer>
+                    <feBlend result='blend-0' in='bg' in2='none' />
+                    <feGaussianBlur result='blur-6' in='blend-0' stdDeviation='10' />
+                    <feTurbulence result='turb' baseFrequency='0.420' type='fractalNoise' />
+                    <feDisplacementMap result='disp' in='blur-6' in2='turb' scale='150' xChannelSelector='R' yChannelSelector='G' />
+                    <feComponentTransfer result='mask' in='SourceGraphic'>
+                      <feFuncR type='discrete' tableValues='0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000' />
+                      <feFuncG type='discrete' tableValues='0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000' />
+                      <feFuncB type='discrete' tableValues='0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000 0.000 0.333 0.667 1.000' />
+                    </feComponentTransfer>
+                    <feBlend result='mask2' />
+                    <feColorMatrix result='cm0' in='mask2' values='0.761905 0.190476 0.047619 0 0 0.761905 0.190476 0.047619 0 0 0.761905 0.190476 0.047619 0 0 0 0 0 1 0' />
+                    <feColorMatrix result='cm1' in='cm0' type='luminanceToAlpha' />
+                    <feGaussianBlur result='blur-0' in='cm1' stdDeviation='0' />
+                    <feComposite result='comp' in='disp' in2='blur-0' operator='in' />
+                    <feMerge><feMergeNode in='blend-0' /><feMergeNode in='comp' /></feMerge>
+                  </filter>
+                  <filter id='frost-card-gray-pack'>
+                    <feComponentTransfer result='packed' in='SourceGraphic'>
+                      <feFuncR type='discrete' tableValues='0 0.3333 0.6667 1' />
+                      <feFuncG type='discrete' tableValues='0 0.3333 0.6667 1 0 0.3333 0.6667 1 0 0.3333 0.6667 1 0 0.3333 0.6667 1' />
+                      <feFuncB type='discrete' tableValues='0 0.3333 0.6667 1 0 0.3333 0.6667 1 0 0.3333 0.6667 1 0 0.3333 0.6667 1 0 0.3333 0.6667 1 0 0.3333 0.6667 1 0 0.3333 0.6667 1 0 0.3333 0.6667 1 0 0.3333 0.6667 1 0 0.3333 0.6667 1 0 0.3333 0.6667 1' />
+                      <feFuncA type='identity' />
+                    </feComponentTransfer>
+                  </filter>
+                  <filter id='frost-card-pack-lower'>
+                    <feColorMatrix type='matrix' values='0.011764705882352941 0 0 0 0 0 0.011764705882352941 0 0 0 0 0 0.011764705882352941 0 0 0 0 0 1 0' />
+                  </filter>
+                </defs>
+              </svg>
+            </>
+          )}
         </div>
       </div>
     </div>
