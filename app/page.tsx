@@ -530,7 +530,7 @@ export default function Home() {
           <div className='relative'>
             {/* Album — CSS 3D rotation matches the Three.js cube */}
             <div ref={albumWrapRef} className='relative z-50 translate-x-3 sm:translate-x-4 scale-[0.85] sm:scale-90' style={{ transition: 'transform 0.3s ease-out' }}>
-              <MusicArtwork artist={newEyeRecord.artist} music={newEyeRecord.music} albumArt={newEyeRecord.albumArt} audioSrc={newEyeRecord.audioSrc} isSong={newEyeRecord.isSong} plasticWrap={newEyeRecord.plasticWrap} subjects={newEyeRecord.subjects} frosted />
+              <MusicArtwork artist={newEyeRecord.artist} music={newEyeRecord.music} albumArt={newEyeRecord.albumArt} audioSrc={newEyeRecord.audioSrc} isSong={newEyeRecord.isSong} plasticWrap={newEyeRecord.plasticWrap} subjects={newEyeRecord.subjects} frosted={!isMobile} />
             </div>
             {/* Ice cube canvas — pointer-events off so album stays interactive */}
             <div className='absolute -inset-28 sm:-inset-40 z-40 pointer-events-none'>
