@@ -67,9 +67,10 @@ const iceFragmentShader = `
 
 interface Props {
   tiltRef: React.RefObject<{ rx: number; ry: number }>;
+  scale?: number;
 }
 
-export default function IceCube3D({ tiltRef }: Props) {
+export default function IceCube3D({ tiltRef, scale = 2.0 }: Props) {
   const { scene } = useGLTF('/models/ice_cube.glb');
   const groupRef = useRef<THREE.Group>(null);
   const materialRef = useRef<THREE.ShaderMaterial | null>(null);
@@ -111,7 +112,7 @@ export default function IceCube3D({ tiltRef }: Props) {
   return (
     <group ref={groupRef}>
       <Center>
-        <primitive object={clonedScene} scale={2.0} />
+        <primitive object={clonedScene} scale={scale} />
       </Center>
     </group>
   );
