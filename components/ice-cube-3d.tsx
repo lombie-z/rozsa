@@ -89,7 +89,7 @@ export default function IceCube3D({ tiltRef, scale = 2.0 }: Props) {
   }, []);
 
   const clonedScene = useMemo(() => {
-    const c = scene.clone(true);
+    const c = scene.clone();
     c.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         child.material = iceMaterial;

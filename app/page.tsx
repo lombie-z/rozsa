@@ -24,13 +24,6 @@ const FluidOverlay = dynamic(() => import('@/components/fluid-overlay'), {
   ssr: false,
 });
 
-const GrainOverlay = dynamic(() => import('@/components/grain-overlay'), {
-  ssr: false,
-});
-
-const ScanlineOverlay = dynamic(() => import('@/components/scanline-overlay'), {
-  ssr: false,
-});
 
 const IceCube3D = dynamic(() => import('@/components/ice-cube-3d'), {
   ssr: false,
@@ -365,18 +358,6 @@ export default function Home() {
 
   return (
     <PlayingProvider>
-    {/* Film grain overlay — covers whole site, ignores pointer events */}
-    <div className='fixed inset-0 z-[60] pointer-events-none' style={{ opacity: 0.08, mixBlendMode: 'screen' }}>
-      <svg width='0' height='0' style={{ position: 'absolute' }}>
-        <defs>
-          <filter id='site-grain'>
-            <feTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch' />
-            <feColorMatrix type='saturate' values='0' />
-          </filter>
-        </defs>
-      </svg>
-      <div className='w-full h-full' style={{ filter: 'url(#site-grain)' }} />
-    </div>
     {/* Top-right controls */}
     <div className='fixed top-6 right-6 z-50 flex flex-col items-end gap-3'>
       <button
@@ -504,12 +485,12 @@ export default function Home() {
       </section>
 
       {/* Page 1 - ROZSA Shader Scene */}
-      <section ref={rozsaRef} className='h-[100dvh] w-full relative bg-black'>
+      <section ref={rozsaRef} className='h-[100dvh] w-full relative bg-black' style={{ contain: 'layout style paint' }}>
         <ShaderScene lowQuality={isMobile} />
       </section>
 
       {/* Page 2 - New Eye (Opens) */}
-      <section ref={newEyeRef} className='h-[100dvh] w-full bg-black flex items-center justify-center relative'>
+      <section ref={newEyeRef} className='h-[100dvh] w-full bg-black flex items-center justify-center relative' style={{ contain: 'layout style paint' }}>
         {newEyeShaderMounted && (
           <div className='absolute inset-0 z-0 overflow-hidden transition-opacity duration-[5000ms]' style={{ opacity: newEyeVisible ? 1 : 0 }}>
             <Canvas
@@ -518,7 +499,7 @@ export default function Home() {
               gl={{ alpha: true, antialias: false }}
               style={{ width: '100%', height: '100%' }}
               dpr={[1, 1]}
-              frameloop='always'
+              frameloop={newEyeVisible ? 'always' : 'never'}
             >
               <FluidOverlay blue />
             </Canvas>
@@ -532,32 +513,34 @@ export default function Home() {
             <div ref={albumWrapRef} className='relative z-50 translate-x-3 sm:translate-x-4 scale-[0.85] sm:scale-90' style={{ transition: 'transform 0.3s ease-out' }}>
               <MusicArtwork artist={newEyeRecord.artist} music={newEyeRecord.music} albumArt={newEyeRecord.albumArt} audioSrc={newEyeRecord.audioSrc} isSong={newEyeRecord.isSong} plasticWrap={newEyeRecord.plasticWrap} subjects={newEyeRecord.subjects} frosted={!isMobile} />
             </div>
-            {/* Ice cube canvas — pointer-events off so album stays interactive */}
-            <div className='absolute -inset-28 sm:-inset-40 z-40 pointer-events-none'>
-              <Canvas
-                camera={{ position: [0, 0, 5], fov: 40 }}
-                gl={{ alpha: true, antialias: true }}
-                style={{ width: '100%', height: '100%' }}
-                dpr={canvasDpr}
-                frameloop='always'
-                onCreated={({ gl }) => {
-                  gl.domElement.style.pointerEvents = 'none';
-                  gl.domElement.style.touchAction = 'auto';
-                  if (gl.domElement.parentElement) {
-                    gl.domElement.parentElement.style.pointerEvents = 'none';
-                    gl.domElement.parentElement.style.touchAction = 'auto';
-                  }
-                }}
-              >
-                <IceCube3D tiltRef={iceTiltRef} scale={isMobile ? 1.75 : 2.0} />
-              </Canvas>
-            </div>
+            {/* Ice cube canvas — only mounted when section visible */}
+            {newEyeShaderMounted && (
+              <div className='absolute -inset-28 sm:-inset-40 z-40 pointer-events-none'>
+                <Canvas
+                  camera={{ position: [0, 0, 5], fov: 40 }}
+                  gl={{ alpha: true, antialias: true }}
+                  style={{ width: '100%', height: '100%' }}
+                  dpr={canvasDpr}
+                  frameloop={newEyeVisible ? 'always' : 'never'}
+                  onCreated={({ gl }) => {
+                    gl.domElement.style.pointerEvents = 'none';
+                    gl.domElement.style.touchAction = 'auto';
+                    if (gl.domElement.parentElement) {
+                      gl.domElement.parentElement.style.pointerEvents = 'none';
+                      gl.domElement.parentElement.style.touchAction = 'auto';
+                    }
+                  }}
+                >
+                  <IceCube3D tiltRef={iceTiltRef} scale={isMobile ? 1.75 : 2.0} />
+                </Canvas>
+              </div>
+            )}
           </div>
         </div>
       </section>
 
       {/* Page 3 - Social Links */}
-      <section className='h-[100dvh] w-full bg-black flex items-center justify-center'>
+      <section className='h-[100dvh] w-full bg-black flex items-center justify-center' style={{ contain: 'layout style paint' }}>
         <div className='flex flex-col sm:flex-row items-center gap-8 sm:gap-10'>
           {socialLinks.map((link) => (
             <a
