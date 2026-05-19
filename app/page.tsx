@@ -549,7 +549,7 @@ export default function Home() {
                   }
                 }}
               >
-                <IceCube3D tiltRef={iceTiltRef} scale={isMobile ? 1.7 : 2.0} />
+                <IceCube3D tiltRef={iceTiltRef} scale={isMobile ? 1.75 : 2.0} />
               </Canvas>
             </div>
           </div>
