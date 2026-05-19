@@ -140,18 +140,26 @@ export default function Home() {
     const el = newEyeRef.current;
     if (!el) return;
     let unmountTimer: ReturnType<typeof setTimeout> | null = null;
-    const observer = new IntersectionObserver(([entry]) => {
+    const premountObserver = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
-        if (unmountTimer) { clearTimeout(unmountTimer); unmountTimer = null; }
         setNewEyeShaderMounted(true);
-        requestAnimationFrame(() => setNewEyeVisible(true));
       } else {
-        setNewEyeVisible(false);
         unmountTimer = setTimeout(() => setNewEyeShaderMounted(false), 1000);
       }
+    }, { threshold: 0, rootMargin: '100% 0px' });
+
+    const visibleObserver = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        if (unmountTimer) { clearTimeout(unmountTimer); unmountTimer = null; }
+        setTimeout(() => setNewEyeVisible(true), 100);
+      } else {
+        setNewEyeVisible(false);
+      }
     }, { threshold: 0.1 });
-    observer.observe(el);
-    return () => { observer.disconnect(); if (unmountTimer) clearTimeout(unmountTimer); };
+
+    premountObserver.observe(el);
+    visibleObserver.observe(el);
+    return () => { premountObserver.disconnect(); visibleObserver.disconnect(); if (unmountTimer) clearTimeout(unmountTimer); };
   }, []);
 
   const isMobile = useIsMobile();
@@ -163,7 +171,7 @@ export default function Home() {
     const onMove = (e: MouseEvent) => {
       const x = (e.clientX / window.innerWidth - 0.5) * 2;
       const y = (e.clientY / window.innerHeight - 0.5) * 2;
-      iceTiltRef.current = { rx: -y * 0.25, ry: x * 0.3 };
+      iceTiltRef.current = { rx: y * 0.25, ry: x * 0.3 };
       if (!raf) {
         raf = requestAnimationFrame(() => {
           if (albumWrapRef.current) {
@@ -515,7 +523,7 @@ export default function Home() {
             </div>
             {/* Ice cube canvas — only mounted when section visible */}
             {newEyeShaderMounted && (
-              <div className='absolute -inset-28 sm:-inset-40 z-40 pointer-events-none'>
+              <div className='absolute -inset-28 sm:-inset-40 z-40 pointer-events-none transition-opacity duration-[3000ms]' style={{ opacity: newEyeVisible ? 1 : 0 }}>
                 <Canvas
                   camera={{ position: [0, 0, 5], fov: 40 }}
                   gl={{ alpha: true, antialias: true }}
