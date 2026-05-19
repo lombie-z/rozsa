@@ -242,21 +242,18 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, plasticW
     const handleMouseMove = (e: MouseEvent) => {
       requestAnimationFrame(() => {
         if (!tooltipRef.current) return;
-        const tooltipWidth = 300;
-        const tooltipHeight = 60;
-        const offset = 20;
+        const tooltipWidth = 200;
+        const tooltipHeight = 30;
+        const offset = 12;
 
         let x = e.clientX + offset;
-        let y = e.clientY - tooltipHeight - 10;
+        let y = e.clientY - tooltipHeight - 4;
 
         if (x + tooltipWidth > window.innerWidth) {
           x = e.clientX - tooltipWidth - offset;
         }
         if (y < 0) {
           y = e.clientY + offset;
-        }
-        if (y + tooltipHeight > window.innerHeight) {
-          y = e.clientY - tooltipHeight - offset;
         }
 
         tooltipRef.current.style.left = `${x}px`;
@@ -296,15 +293,16 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, plasticW
       {mounted && createPortal(
         <div
           ref={tooltipRef}
-          className='fixed z-50 pointer-events-none hidden sm:block transition-all duration-300 ease-out'
+          className='fixed z-50 pointer-events-none hidden sm:block'
           style={{
             left: 0,
             top: 0,
             opacity: isHovered ? 1 : 0,
             transform: isHovered ? 'translateY(0)' : 'translateY(6px)',
+            transition: 'opacity 300ms ease-out, transform 300ms ease-out',
           }}
         >
-          <div className='bg-neutral-900/90 backdrop-blur-md text-white px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap shadow-lg border border-neutral-700/50'>
+          <div className='bg-black/80 text-white px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap border border-white/[0.06]'>
             {music}
           </div>
         </div>,
