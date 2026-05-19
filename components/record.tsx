@@ -425,10 +425,10 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, plasticW
           {!imageLoaded && <div className='absolute inset-0 bg-neutral-900 animate-pulse' />}
 
           {/* Hover/active gradient overlay */}
-          <div className={`absolute inset-0 z-40 bg-gradient-to-t from-black/80 via-black/20 via-40% to-transparent transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`} />
+          <div className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 via-40% to-transparent transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`} />
 
           {/* Play/Pause button + artist info */}
-          <div className={`absolute bottom-2 left-2 z-40 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+          <div className={`absolute bottom-2 left-2 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
             <div className='flex items-center gap-2'>
               {/* Play/Pause icon */}
               <div className='w-8 h-8 bg-transparent rounded-full flex items-center justify-center shadow-lg'>
