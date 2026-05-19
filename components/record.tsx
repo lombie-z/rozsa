@@ -33,7 +33,7 @@ interface MusicArtworkProps {
   frosted?: boolean;
 }
 
-const FROST_AREAS = 25;
+const FROST_AREAS = 15;
 const FROST_COUNT = FROST_AREAS * FROST_AREAS;
 
 const frostStyles = `
@@ -71,8 +71,8 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, plasticW
   const recordId = `${artist}—${music}`;
   const { playingId, setPlayingId, volume } = usePlaying();
 
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
+  const tooltipRef = useRef<HTMLDivElement>(null);
   // On touch devices the first tap activates the controls; the second tap plays/pauses
   const [isTouched, setIsTouched] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
@@ -241,29 +241,26 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, plasticW
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       requestAnimationFrame(() => {
-        const tooltipWidth = 300; // Increased for more content
-        const tooltipHeight = 60; // Increased for multiple lines
+        if (!tooltipRef.current) return;
+        const tooltipWidth = 300;
+        const tooltipHeight = 60;
         const offset = 20;
 
         let x = e.clientX + offset;
         let y = e.clientY - tooltipHeight - 10;
 
-        // Prevent tooltip from going off right edge
         if (x + tooltipWidth > window.innerWidth) {
           x = e.clientX - tooltipWidth - offset;
         }
-
-        // Prevent tooltip from going off top edge
         if (y < 0) {
           y = e.clientY + offset;
         }
-
-        // Prevent tooltip from going off bottom edge
         if (y + tooltipHeight > window.innerHeight) {
           y = e.clientY - tooltipHeight - offset;
         }
 
-        setMousePosition({ x, y });
+        tooltipRef.current.style.left = `${x}px`;
+        tooltipRef.current.style.top = `${y}px`;
       });
     };
 
@@ -298,10 +295,11 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, plasticW
       {/* Tooltip that follows cursor - portaled to body to escape 3D transform contexts */}
       {mounted && createPortal(
         <div
+          ref={tooltipRef}
           className='fixed z-50 pointer-events-none hidden sm:block transition-all duration-300 ease-out'
           style={{
-            left: mousePosition.x,
-            top: mousePosition.y,
+            left: 0,
+            top: 0,
             opacity: isHovered ? 1 : 0,
             transform: isHovered ? 'translateY(0)' : 'translateY(6px)',
           }}
