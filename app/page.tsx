@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { Canvas } from '@react-three/fiber';
 import MusicArtwork from '@/components/record';
+import RoseNav from '@/components/rose-nav';
 import LoadingScreen from '@/components/loading-screen';
 import { useIsMobile, usePrefersReducedMotion } from '@/lib/use-mobile';
 import { PlayingProvider, usePlaying } from '@/lib/playing-context';
@@ -194,10 +195,12 @@ export default function Home() {
   // Calculate scroll progress between landing and ROZSA pages
   const [scrollProgress, setScrollProgress] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [activeSection, setActiveSection] = useState(0);
 
   const sectionRefs = [landingRef, rozsaRef];
   const canScrollRef = useRef(true);
   const targetIndexRef = useRef(0);
+  const scrollToSectionRef = useRef<(index: number) => void>(() => {});
 
   useEffect(() => {
     if (reducedMotion) return;
@@ -216,14 +219,17 @@ export default function Home() {
       if (dist < minDist) { minDist = dist; closest = i; }
     }
     targetIndexRef.current = closest;
+    setActiveSection(closest);
 
     const scrollToSection = (index: number) => {
       const clamped = Math.max(0, Math.min(allSections.length - 1, index));
       if (clamped === targetIndexRef.current) return;
       targetIndexRef.current = clamped;
+      setActiveSection(clamped);
       canScrollRef.current = false;
       el.scrollTo({ top: allSections[clamped].offsetTop, behavior: 'smooth' });
     };
+    scrollToSectionRef.current = scrollToSection;
 
     // Re-enable scrolling when smooth scroll finishes.
     // scrollend fires reliably in modern browsers; setTimeout is a fallback.
@@ -368,6 +374,7 @@ export default function Home() {
     <PlayingProvider>
     {/* Top-right controls */}
     <div className='fixed top-6 right-6 z-50 flex flex-col items-end gap-3'>
+      <RoseNav activeIndex={activeSection} total={4} onNavigate={(i) => scrollToSectionRef.current(i)} />
       <button
         onClick={() => setAboutOpen(true)}
         className='px-5 py-2 rounded-full border border-white/20 text-white/50 text-sm font-medium hover:border-white/40 hover:text-white/80 transition-all duration-300 backdrop-blur-sm'
