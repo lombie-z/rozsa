@@ -129,6 +129,7 @@ export default function Home() {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [waterReady, setWaterReady] = useState(false);
   const [albumReady, setAlbumReady] = useState(false);
+  const [rozsaVisible, setRozsaVisible] = useState(false);
   const allReady = waterReady && albumReady;
 
   // Fallback: never get stuck on the loading screen
@@ -160,7 +161,14 @@ export default function Home() {
 
     premountObserver.observe(el);
     visibleObserver.observe(el);
-    return () => { premountObserver.disconnect(); visibleObserver.disconnect(); if (unmountTimer) clearTimeout(unmountTimer); };
+
+    const rozsaEl = rozsaRef.current;
+    const rozsaObserver = rozsaEl ? new IntersectionObserver(([entry]) => {
+      setRozsaVisible(entry.isIntersecting);
+    }, { threshold: 0.1 }) : null;
+    if (rozsaEl) rozsaObserver!.observe(rozsaEl);
+
+    return () => { premountObserver.disconnect(); visibleObserver.disconnect(); rozsaObserver?.disconnect(); if (unmountTimer) clearTimeout(unmountTimer); };
   }, []);
 
   const isMobile = useIsMobile();
@@ -462,7 +470,7 @@ export default function Home() {
             gl={{ alpha: true, antialias: false, preserveDrawingBuffer: true }}
             style={{ width: '100%', height: '100%', display: 'block' }}
             dpr={canvasDpr}
-            frameloop='always'
+            frameloop={scrollProgress >= 1 ? 'never' : 'always'}
             onCreated={({ gl }) => {
               gl.domElement.style.pointerEvents = 'none';
               gl.domElement.style.touchAction = 'auto';
@@ -501,7 +509,7 @@ export default function Home() {
 
       {/* Page 1 - ROZSA Shader Scene */}
       <section ref={rozsaRef} className='h-[100dvh] w-full relative bg-black' style={{ contain: 'layout style paint' }}>
-        <ShaderScene lowQuality={isMobile} />
+        <ShaderScene lowQuality={isMobile} visible={rozsaVisible} />
       </section>
 
       {/* Page 2 - New Eye (Opens) */}
