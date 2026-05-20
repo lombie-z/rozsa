@@ -7,7 +7,7 @@ import * as THREE from 'three';
 
 // Quality presets — mobile uses fewer raymarching steps and blobs to stay within GPU budget
 const SHADER_QUALITY = {
-  high: { MAX_STEPS: 128, PRECISION: 0.0005, AMOUNT: 4 },
+  high: { MAX_STEPS: 80, PRECISION: 0.001, AMOUNT: 4 },
   low:  { MAX_STEPS: 64,  PRECISION: 0.001,  AMOUNT: 2 },
 } as const;
 
@@ -367,7 +367,7 @@ export const ShaderScene: FC<ShaderSceneProps> = React.memo(({ lowQuality = fals
           antialias: !lowQuality,
           powerPreference: 'high-performance',
         }}
-        dpr={lowQuality ? [1, 1] : [1, 2]}
+        dpr={lowQuality ? [1, 1] : [1, 1.5]}
         style={{ width: '100%', height: '100%' }}
         frameloop={visible ? 'always' : 'never'}
       >
