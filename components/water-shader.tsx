@@ -208,8 +208,8 @@ const createFragmentShader = (lowQuality: boolean) => {
     vec2 uv = gl_FragCoord.xy / iResolution.xy;
     uv = uv * 2.0 - 1.0;
     uv.x *= iResolution.x / iResolution.y;    
-    float time = iGlobalTime * 0.3;
-    float seaTime = iGlobalTime * SEA_SPEED;
+    float time = mod(iGlobalTime * 0.3, 1000.0);
+    float seaTime = mod(iGlobalTime * SEA_SPEED, 1000.0);
     float epsilonNrm = 0.1 / iResolution.x;
     
     // Depth effect: move camera deeper based on scroll progress
@@ -221,7 +221,7 @@ const createFragmentShader = (lowQuality: boolean) => {
       sin(time*3.0)*0.1,sin(time)*0.2+0.3,time
     );    
     // Move camera deeper as we scroll (simulate going underwater)
-    vec3 ori = vec3(0.0, 3.5 - depthOffset, time*5.0 - depthOffset);
+    vec3 ori = vec3(0.0, 3.5 - depthOffset, mod(time*5.0, 1000.0) - depthOffset);
     vec3 dir = normalize(
       vec3(uv.xy,-2.0)
     );
