@@ -111,10 +111,11 @@ float sdf(vec3 p) {
 
 vec3 calcNormal(in vec3 p) {
   const float h = 0.001;
+  float d = sdf(p);
   return normalize(vec3(
-    sdf(p + vec3(h, 0, 0)) - sdf(p - vec3(h, 0, 0)),
-    sdf(p + vec3(0, h, 0)) - sdf(p - vec3(0, h, 0)),
-    sdf(p + vec3(0, 0, h)) - sdf(p - vec3(0, 0, h))
+    sdf(p + vec3(h, 0, 0)) - d,
+    sdf(p + vec3(0, h, 0)) - d,
+    sdf(p + vec3(0, 0, h)) - d
   ));
 }
 
@@ -336,9 +337,10 @@ const Scene: FC<SceneProps> = ({ amount, maxSteps, precision }) => {
 
 interface ShaderSceneProps {
   lowQuality?: boolean;
+  visible?: boolean;
 }
 
-export const ShaderScene: FC<ShaderSceneProps> = React.memo(({ lowQuality = false }) => {
+export const ShaderScene: FC<ShaderSceneProps> = React.memo(({ lowQuality = false, visible = true }) => {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -367,6 +369,7 @@ export const ShaderScene: FC<ShaderSceneProps> = React.memo(({ lowQuality = fals
         }}
         dpr={lowQuality ? [1, 1] : [1, 2]}
         style={{ width: '100%', height: '100%' }}
+        frameloop={visible ? 'always' : 'never'}
       >
         <Scene amount={quality.AMOUNT} maxSteps={quality.MAX_STEPS} precision={quality.PRECISION} />
       </Canvas>

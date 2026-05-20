@@ -33,7 +33,7 @@ interface MusicArtworkProps {
   frosted?: boolean;
 }
 
-const FROST_AREAS = 15;
+const FROST_AREAS = 10;
 const FROST_COUNT = FROST_AREAS * FROST_AREAS;
 
 const frostStyles = `
@@ -104,7 +104,7 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, plasticW
   useEffect(() => {
     if (!audioSrc) return;
     const audio = new Audio(audioSrc);
-    audio.preload = 'metadata';
+    audio.preload = 'none';
     audioRef.current = audio;
     const handleEnded = () => {
       setIsPlaying(false);
