@@ -402,7 +402,7 @@ export default function Home() {
     <LoadingScreen ready={allReady} />
 
     {/* All sections stacked, visibility controlled by currentPage */}
-    <main className='h-[100dvh] w-full bg-black relative overflow-hidden'>
+    <main className='h-[100dvh] w-full bg-black relative overflow-hidden overscroll-none' style={{ touchAction: 'none' }}>
 
       {/* ── Water Shader — fixed overlay, fades out when leaving landing ── */}
       <div
