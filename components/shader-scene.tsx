@@ -181,11 +181,13 @@ interface ScreenPlaneProps {
   amount: number;
   maxSteps: number;
   precision: number;
+  active?: boolean;
 }
 
-const ScreenPlane: FC<ScreenPlaneProps> = ({ animationState, amount, maxSteps, precision }) => {
+const ScreenPlane: FC<ScreenPlaneProps> = ({ animationState, amount, maxSteps, precision, active = true }) => {
   const { viewport, size } = useThree();
   const materialRef = useRef<THREE.ShaderMaterial>(null!);
+  const intensityRef = useRef(0);
 
   const uniforms = useMemo(
     () => ({
@@ -201,17 +203,21 @@ const ScreenPlane: FC<ScreenPlaneProps> = ({ animationState, amount, maxSteps, p
 
   useFrame((state, delta) => {
     if (materialRef.current) {
+      const target = active ? 1 : 0;
+      intensityRef.current += (target - intensityRef.current) * Math.min(delta * 0.6, 1);
+      const intensity = intensityRef.current;
+
       materialRef.current.uniforms.u_time.value += delta;
       materialRef.current.uniforms.u_aspect.value = state.size.width / state.size.height;
       const time = materialRef.current.uniforms.u_time.value;
 
       animationState.baseOffsets.forEach((offset, i) => {
-        const wanderX = Math.sin(time * offset.posSpeed.x + offset.posPhase.x) * 0.8;
-        const wanderY = Math.cos(time * offset.posSpeed.y + offset.posPhase.y) * 5;
-        const wanderZ = Math.sin(time * offset.posSpeed.z + offset.posPhase.z) * 0.5;
+        const wanderX = Math.sin(time * offset.posSpeed.x + offset.posPhase.x) * 0.8 * intensity;
+        const wanderY = Math.cos(time * offset.posSpeed.y + offset.posPhase.y) * 5 * intensity;
+        const wanderZ = Math.sin(time * offset.posSpeed.z + offset.posPhase.z) * 0.5 * intensity;
 
-        const secondaryX = Math.cos(time * offset.posSpeed.x * 0.7 + offset.posPhase.x * 1.3) * 0.4;
-        const secondaryY = Math.sin(time * offset.posSpeed.y * 0.8 + offset.posPhase.y * 1.1) * 0.3;
+        const secondaryX = Math.cos(time * offset.posSpeed.x * 0.7 + offset.posPhase.x * 1.3) * 0.4 * intensity;
+        const secondaryY = Math.sin(time * offset.posSpeed.y * 0.8 + offset.posPhase.y * 1.1) * 0.3 * intensity;
 
         animationState.positions[i].set(offset.x + wanderX + secondaryX, offset.y + wanderY + secondaryY, wanderZ);
 
@@ -305,9 +311,10 @@ interface SceneProps {
   amount: number;
   maxSteps: number;
   precision: number;
+  active?: boolean;
 }
 
-const Scene: FC<SceneProps> = ({ amount, maxSteps, precision }) => {
+const Scene: FC<SceneProps> = ({ amount, maxSteps, precision, active = true }) => {
   const animationStateRef = useRef<AnimationState | null>(null);
 
   // Re-create animation state only when blob count changes
@@ -327,7 +334,7 @@ const Scene: FC<SceneProps> = ({ amount, maxSteps, precision }) => {
 
   return (
     <>
-      <ScreenPlane animationState={animationState} amount={amount} maxSteps={maxSteps} precision={precision} />
+      <ScreenPlane animationState={animationState} amount={amount} maxSteps={maxSteps} precision={precision} active={active} />
       <Suspense fallback={null}>
         <SceneText animationState={animationState} amount={amount} />
       </Suspense>
@@ -337,10 +344,10 @@ const Scene: FC<SceneProps> = ({ amount, maxSteps, precision }) => {
 
 interface ShaderSceneProps {
   lowQuality?: boolean;
-  visible?: boolean;
+  active?: boolean;
 }
 
-export const ShaderScene: FC<ShaderSceneProps> = React.memo(({ lowQuality = false, visible = true }) => {
+export const ShaderScene: FC<ShaderSceneProps> = React.memo(({ lowQuality = false, active = true }) => {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -369,9 +376,9 @@ export const ShaderScene: FC<ShaderSceneProps> = React.memo(({ lowQuality = fals
         }}
         dpr={lowQuality ? [1, 1] : [1, 1.5]}
         style={{ width: '100%', height: '100%' }}
-        frameloop={visible ? 'always' : 'never'}
+        frameloop='always'
       >
-        <Scene amount={quality.AMOUNT} maxSteps={quality.MAX_STEPS} precision={quality.PRECISION} />
+        <Scene amount={quality.AMOUNT} maxSteps={quality.MAX_STEPS} precision={quality.PRECISION} active={active} />
       </Canvas>
     </div>
   );

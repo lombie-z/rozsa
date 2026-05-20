@@ -1,7 +1,6 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { Canvas } from '@react-three/fiber';
@@ -11,24 +10,10 @@ import LoadingScreen from '@/components/loading-screen';
 import { useIsMobile, usePrefersReducedMotion } from '@/lib/use-mobile';
 import { PlayingProvider, usePlaying } from '@/lib/playing-context';
 
-// Dynamically import the shader scene with SSR disabled since Three.js needs browser APIs
-const ShaderScene = dynamic(() => import('@/components/shader-scene'), {
-  ssr: false,
-});
-
-// Dynamically import the water shader with SSR disabled
-const WaterShader = dynamic(() => import('@/components/water-shader').then((mod) => ({ default: mod.WaterShader })), {
-  ssr: false,
-});
-
-const FluidOverlay = dynamic(() => import('@/components/fluid-overlay'), {
-  ssr: false,
-});
-
-
-const IceCube3D = dynamic(() => import('@/components/ice-cube-3d'), {
-  ssr: false,
-});
+const ShaderScene = dynamic(() => import('@/components/shader-scene'), { ssr: false });
+const WaterShader = dynamic(() => import('@/components/water-shader').then((mod) => ({ default: mod.WaterShader })), { ssr: false });
+const FluidOverlay = dynamic(() => import('@/components/fluid-overlay'), { ssr: false });
+const IceCube3D = dynamic(() => import('@/components/ice-cube-3d'), { ssr: false });
 
 const landingRecord = { artist: 'Isaac Rozsa', music: 'Prologue', albumArt: '/albums/new-eye-opens.png', audioSrc: '/audio/new-eye-opens.mp3', isSong: true, plasticWrap: 1 as const, subjects: ['/subject.png', '/subject2.png'] as [string, string] };
 const newEyeRecord = { artist: 'Isaac Rozsa', music: 'Dude Like Dust', albumArt: '/albums/dude-like-dust.png', audioSrc: '/audio/dude-like-dust.mp3', isSong: true, plasticWrap: 2 as const, subjects: ['/subject3.png', '/subject3.png'] as [string, string] };
@@ -68,6 +53,17 @@ const socialLinks = [
     </svg>
   )},
 ];
+
+const TOTAL_PAGES = 4;
+const NAV_COOLDOWN = 1100;
+
+// Custom easing: strong deceleration, physical feel
+const EASE_OUT_EXPO = 'cubic-bezier(0.16, 1, 0.3, 1)';
+
+// Timing constants
+const EXIT_DURATION = 600;   // ms — outgoing page exit
+const ENTER_DURATION = 700;  // ms — incoming page enter
+const STAGGER_DELAY = 200;   // ms — delay before incoming starts (overlap with exit)
 
 function VolumeControl() {
   const { volume, setVolume } = usePlaying();
@@ -118,18 +114,27 @@ function VolumeControl() {
 }
 
 export default function Home() {
-  const mainRef = useRef<HTMLElement>(null);
-  const landingRef = useRef<HTMLElement>(null);
-  const rozsaRef = useRef<HTMLElement>(null);
-  const newEyeRef = useRef<HTMLElement>(null);
   const iceTiltRef = useRef({ rx: 0, ry: 0 });
   const albumWrapRef = useRef<HTMLDivElement>(null);
-  const [newEyeVisible, setNewEyeVisible] = useState(false);
-  const [newEyeShaderMounted, setNewEyeShaderMounted] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [waterReady, setWaterReady] = useState(false);
   const [albumReady, setAlbumReady] = useState(false);
+  const [copied, setCopied] = useState(false);
   const allReady = waterReady && albumReady;
+  const canNavRef = useRef(true);
+
+  // Transition state
+  const previousPageRef = useRef(0);
+  const [exitingPage, setExitingPage] = useState<number | null>(null);
+  const [enteringPage, setEnteringPage] = useState<number | null>(null);
+  const [enterReady, setEnterReady] = useState(false); // flips after 1 frame to trigger CSS transition
+  const directionRef = useRef<1 | -1>(1); // 1 = forward, -1 = backward
+  const transitionTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const isMobile = useIsMobile();
+  const reducedMotion = usePrefersReducedMotion();
+  const canvasDpr: [number, number] = isMobile ? [1, 1] : [1, 2];
 
   // Fallback: never get stuck on the loading screen
   useEffect(() => {
@@ -137,37 +142,102 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Clean up transition timers on unmount
   useEffect(() => {
-    const el = newEyeRef.current;
-    if (!el) return;
-    let unmountTimer: ReturnType<typeof setTimeout> | null = null;
-    const premountObserver = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setNewEyeShaderMounted(true);
-      } else {
-        unmountTimer = setTimeout(() => setNewEyeShaderMounted(false), 1000);
-      }
-    }, { threshold: 0, rootMargin: '100% 0px' });
-
-    const visibleObserver = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        if (unmountTimer) { clearTimeout(unmountTimer); unmountTimer = null; }
-        setTimeout(() => setNewEyeVisible(true), 100);
-      } else {
-        setNewEyeVisible(false);
-      }
-    }, { threshold: 0.1 });
-
-    premountObserver.observe(el);
-    visibleObserver.observe(el);
-
-    return () => { premountObserver.disconnect(); visibleObserver.disconnect(); if (unmountTimer) clearTimeout(unmountTimer); };
+    return () => { transitionTimers.current.forEach(clearTimeout); };
   }, []);
 
-  const isMobile = useIsMobile();
-  const reducedMotion = usePrefersReducedMotion();
+  // Navigate to a page with cooldown
+  const goToPage = useCallback((index: number) => {
+    const clamped = Math.max(0, Math.min(TOTAL_PAGES - 1, index));
+    if (clamped === currentPage || !canNavRef.current) return;
+    canNavRef.current = false;
 
-  // Shared cursor tracking for ice cube + album rotation
+    // Clear any in-flight transition timers
+    transitionTimers.current.forEach(clearTimeout);
+
+    const direction = clamped > currentPage ? 1 : -1;
+    directionRef.current = direction as 1 | -1;
+    previousPageRef.current = currentPage;
+
+    // Phase 1: Start exit animation on current page
+    setExitingPage(currentPage);
+
+    // Phase 2: After stagger delay, mount incoming page at its offset position
+    const t1 = setTimeout(() => {
+      setCurrentPage(clamped);
+      setEnteringPage(clamped);
+      setEnterReady(false); // start at offset — enterReady effect will flip this
+    }, STAGGER_DELAY);
+
+    // Phase 3: After exit completes, clear exiting page
+    const t2 = setTimeout(() => {
+      setExitingPage(null);
+    }, EXIT_DURATION + 100);
+
+    // Phase 4: After enter animation completes, clear entering state
+    const t3 = setTimeout(() => {
+      setEnteringPage(null);
+      setEnterReady(false);
+    }, STAGGER_DELAY + ENTER_DURATION + 50);
+
+    // Unlock navigation after cooldown
+    const t4 = setTimeout(() => { canNavRef.current = true; }, NAV_COOLDOWN);
+
+    transitionTimers.current = [t1, t2, t3, t4];
+  }, [currentPage]);
+
+  // When enteringPage is set with enterReady=false, wait one frame then flip to true
+  // This ensures the browser paints the offset position before transitioning to center
+  useEffect(() => {
+    if (enteringPage !== null && !enterReady) {
+      const raf = requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setEnterReady(true);
+        });
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+  }, [enteringPage, enterReady]);
+
+  // Wheel / touch / keyboard navigation
+  useEffect(() => {
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (Math.abs(e.deltaY) < 5) return;
+      goToPage(currentPage + (e.deltaY > 0 ? 1 : -1));
+    };
+
+    let touchStartY = 0;
+    const onTouchStart = (e: TouchEvent) => { touchStartY = e.touches[0].clientY; };
+    const onTouchEnd = (e: TouchEvent) => {
+      const delta = touchStartY - e.changedTouches[0].clientY;
+      if (Math.abs(delta) < 50) return;
+      goToPage(currentPage + (delta > 0 ? 1 : -1));
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      let dir = 0;
+      if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') dir = 1;
+      if (e.key === 'ArrowUp' || e.key === 'PageUp') dir = -1;
+      if (dir === 0) return;
+      e.preventDefault();
+      goToPage(currentPage + dir);
+    };
+
+    window.addEventListener('wheel', onWheel, { passive: false });
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('wheel', onWheel);
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchend', onTouchEnd);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [currentPage, goToPage]);
+
+  // Cursor tracking for ice cube + album rotation
   useEffect(() => {
     let raf: number | null = null;
     const onMove = (e: MouseEvent) => {
@@ -187,195 +257,105 @@ export default function Home() {
       }
     };
     window.addEventListener('mousemove', onMove, { passive: true });
-    return () => {
-      window.removeEventListener('mousemove', onMove);
-      if (raf) cancelAnimationFrame(raf);
-    };
+    return () => { window.removeEventListener('mousemove', onMove); if (raf) cancelAnimationFrame(raf); };
   }, []);
 
-  // Calculate scroll progress between landing and ROZSA pages
-  const [scrollProgress, setScrollProgress] = useState(0);
-  const [copied, setCopied] = useState(false);
-  const [activeSection, setActiveSection] = useState(0);
+  // Derived state
+  const isLanding = currentPage === 0;
+  const isNewEye = currentPage === 2;
 
-  const sectionRefs = [landingRef, rozsaRef];
-  const canScrollRef = useRef(true);
-  const targetIndexRef = useRef(0);
-  const scrollToSectionRef = useRef<(index: number) => void>(() => {});
-
-  useEffect(() => {
-    if (reducedMotion) return;
-    const el = mainRef.current;
-    if (!el) return;
-
-    const allSections = Array.from(el.querySelectorAll(':scope > section')) as HTMLElement[];
-    const SCROLL_SPEED = 700;
-
-    // Snap to nearest section on mount
-    const scrollTop = el.scrollTop;
-    let closest = 0;
-    let minDist = Infinity;
-    for (let i = 0; i < allSections.length; i++) {
-      const dist = Math.abs(allSections[i].offsetTop - scrollTop);
-      if (dist < minDist) { minDist = dist; closest = i; }
+  // Per-page enter offset: where the page starts when entering
+  const getEnterOffset = (pageIndex: number, dir: 1 | -1): string => {
+    switch (pageIndex) {
+      case 0: return dir === -1 ? 'translateY(-6%) scale(0.97)' : 'translateY(6%) scale(0.97)';
+      case 1: return dir === 1 ? 'scale(1.06)' : 'scale(0.92)';
+      case 2: return dir === 1 ? 'translateY(6%) scale(0.97)' : 'translateY(-6%) scale(0.97)';
+      case 3: return dir === 1 ? 'translateY(10%)' : 'translateY(-10%)';
+      default: return 'none';
     }
-    targetIndexRef.current = closest;
-    setActiveSection(closest);
+  };
 
-    const scrollToSection = (index: number) => {
-      const clamped = Math.max(0, Math.min(allSections.length - 1, index));
-      if (clamped === targetIndexRef.current) return;
-      targetIndexRef.current = clamped;
-      setActiveSection(clamped);
-      canScrollRef.current = false;
-      el.scrollTo({ top: allSections[clamped].offsetTop, behavior: 'smooth' });
-    };
-    scrollToSectionRef.current = scrollToSection;
+  // Per-page exit transform: where the page goes when exiting
+  const getExitTransform = (pageIndex: number, dir: 1 | -1): string => {
+    switch (pageIndex) {
+      case 0: // Landing: drift + scale down
+        return dir === 1 ? 'translateY(-8%) scale(0.95)' : 'translateY(8%) scale(0.95)';
+      case 1: // Shader: subtle scale
+        return dir === 1 ? 'scale(0.92)' : 'scale(1.06)';
+      case 2: // Ice cube: shift opposite to direction
+        return dir === 1 ? 'translateY(-6%) scale(0.97)' : 'translateY(6%) scale(0.97)';
+      case 3: // Socials: simple shift
+        return dir === 1 ? 'translateY(-10%)' : 'translateY(10%)';
+      default: return 'none';
+    }
+  };
 
-    // Re-enable scrolling when smooth scroll finishes.
-    // scrollend fires reliably in modern browsers; setTimeout is a fallback.
-    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
-    const onScrollEnd = () => {
-      canScrollRef.current = true;
-      if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
-    };
-    el.addEventListener('scrollend', onScrollEnd);
+  // Compute transition styles for each page section
+  const getPageStyle = (pageIndex: number): React.CSSProperties => {
+    const isActive = currentPage === pageIndex;
+    const isExiting = exitingPage === pageIndex;
+    const isEntering = enteringPage === pageIndex;
+    const direction = directionRef.current;
 
-    // Acceleration-based inertia filter: real swipes have increasing
-    // deltas, trackpad inertia has decreasing. Compare recent average
-    // against a broader window to tell them apart.
-    const scrollings: number[] = [];
-    let lastWheelTime = 0;
-
-    const isAccelerating = () => {
-      if (scrollings.length < 10) return true;
-      const recent = scrollings.slice(-10);
-      const broad = scrollings.slice(-70);
-      const avgRecent = recent.reduce((a, b) => a + b, 0) / recent.length;
-      const avgBroad = broad.reduce((a, b) => a + b, 0) / broad.length;
-      return avgRecent >= avgBroad;
-    };
-
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-
-      // Always record deltas, even during animation lock — the
-      // acceleration filter needs the full inertia decay history
-      // so it can reject stale momentum when the lock lifts.
-      const now = Date.now();
-      if (now - lastWheelTime > 200) scrollings.length = 0;
-      lastWheelTime = now;
-
-      scrollings.push(Math.abs(e.deltaY));
-      if (scrollings.length > 150) scrollings.splice(0, scrollings.length - 150);
-
-      if (!canScrollRef.current) return;
-      if (!isAccelerating()) return;
-
-      const direction = e.deltaY > 0 ? 1 : -1;
-      scrollToSection(targetIndexRef.current + direction);
-      if (fallbackTimer) clearTimeout(fallbackTimer);
-      fallbackTimer = setTimeout(onScrollEnd, SCROLL_SPEED + 100);
-    };
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (!canScrollRef.current) return;
-      let direction = 0;
-      if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') direction = 1;
-      if (e.key === 'ArrowUp' || e.key === 'PageUp') direction = -1;
-      if (direction === 0) return;
-      e.preventDefault();
-      scrollToSection(targetIndexRef.current + direction);
-      if (fallbackTimer) clearTimeout(fallbackTimer);
-      fallbackTimer = setTimeout(onScrollEnd, SCROLL_SPEED + 100);
-    };
-
-    let touchStartY = 0;
-    const onTouchStart = (e: TouchEvent) => { touchStartY = e.touches[0].clientY; };
-    const onTouchEnd = (e: TouchEvent) => {
-      if (!canScrollRef.current) return;
-      const delta = touchStartY - e.changedTouches[0].clientY;
-      if (Math.abs(delta) < 50) return;
-      scrollToSection(targetIndexRef.current + (delta > 0 ? 1 : -1));
-      if (fallbackTimer) clearTimeout(fallbackTimer);
-      fallbackTimer = setTimeout(onScrollEnd, SCROLL_SPEED + 100);
-    };
-
-    el.addEventListener('wheel', onWheel, { passive: false });
-    el.addEventListener('keydown', onKeyDown);
-    el.addEventListener('touchstart', onTouchStart, { passive: true });
-    el.addEventListener('touchend', onTouchEnd, { passive: true });
-
-    return () => {
-      el.removeEventListener('wheel', onWheel);
-      el.removeEventListener('keydown', onKeyDown);
-      el.removeEventListener('touchstart', onTouchStart);
-      el.removeEventListener('touchend', onTouchEnd);
-      el.removeEventListener('scrollend', onScrollEnd);
-      if (fallbackTimer) clearTimeout(fallbackTimer);
-    };
-  }, [reducedMotion]);
-
-  useEffect(() => {
-    if (reducedMotion) {
-      setScrollProgress(0);
-      return;
+    // ── EXITING: animating out, stays on top during exit ──
+    if (isExiting) {
+      return {
+        opacity: 0,
+        transform: getExitTransform(pageIndex, direction),
+        zIndex: 25,
+        pointerEvents: 'none',
+        transition: `opacity ${EXIT_DURATION}ms ${EASE_OUT_EXPO}, transform ${EXIT_DURATION}ms ${EASE_OUT_EXPO}`,
+      };
     }
 
-    const updateScrollProgress = () => {
-      if (!mainRef.current || !landingRef.current || !rozsaRef.current) return;
-
-      const scrollTop = mainRef.current.scrollTop;
-      const landingBottom = landingRef.current.offsetTop + landingRef.current.offsetHeight;
-      const rozsaTop = rozsaRef.current.offsetTop;
-
-      const transitionStart = landingBottom - window.innerHeight;
-      const transitionEnd = rozsaTop;
-      const transitionDistance = transitionEnd - transitionStart;
-
-      if (scrollTop < transitionStart) {
-        setScrollProgress(0);
-      } else if (scrollTop >= transitionEnd) {
-        setScrollProgress(1);
-      } else {
-        const progress = (scrollTop - transitionStart) / transitionDistance;
-        setScrollProgress(Math.max(0, Math.min(1, progress)));
+    // ── ENTERING: two-phase — first render at offset (no transition), then animate to center ──
+    if (isActive && isEntering) {
+      if (!enterReady) {
+        // Frame 1: snap to offset position (no transition so it's instant)
+        return {
+          opacity: 0,
+          transform: getEnterOffset(pageIndex, direction),
+          zIndex: 20,
+          pointerEvents: 'none',
+          transition: 'none',
+        };
       }
-    };
-
-    const handleScroll = () => {
-      requestAnimationFrame(updateScrollProgress);
-    };
-
-    if (mainRef.current) {
-      mainRef.current.addEventListener('scroll', handleScroll, { passive: true });
-      updateScrollProgress();
+      // Frame 2+: animate from offset to center
+      return {
+        opacity: 1,
+        transform: 'translateY(0) scale(1)',
+        zIndex: 20,
+        pointerEvents: 'auto',
+        transition: `opacity ${ENTER_DURATION}ms ${EASE_OUT_EXPO}, transform ${ENTER_DURATION}ms ${EASE_OUT_EXPO}`,
+      };
     }
 
-    return () => {
-      if (mainRef.current) {
-        mainRef.current.removeEventListener('scroll', handleScroll);
-      }
+    // ── ACTIVE (idle): fully visible, keep transition for smoothness ──
+    if (isActive) {
+      return {
+        opacity: 1,
+        transform: 'translateY(0) scale(1)',
+        zIndex: 20,
+        pointerEvents: 'auto',
+        transition: `opacity ${ENTER_DURATION}ms ${EASE_OUT_EXPO}, transform ${ENTER_DURATION}ms ${EASE_OUT_EXPO}`,
+      };
+    }
+
+    // ── INACTIVE: hidden, no transition so it snaps to offset instantly when needed ──
+    return {
+      opacity: 0,
+      transform: 'translateY(0) scale(1)',
+      zIndex: 0,
+      pointerEvents: 'none',
+      transition: 'none',
     };
-  }, [reducedMotion]);
-
-  // Calculate effect values based on scroll progress
-  // When reduced motion is preferred, skip all scroll-driven visual changes
-  const albumOpacity = reducedMotion ? 1 : Math.max(0, 1 - scrollProgress * 1.5);
-  const albumY = reducedMotion ? 0 : -scrollProgress * 100;
-  const albumScale = reducedMotion ? 1 : Math.max(0.8, 1 - scrollProgress * 0.2);
-  const overlayOpacity = reducedMotion ? 0 : Math.min(0.7, scrollProgress * 0.7);
-  const shaderBlur = reducedMotion ? 0 : scrollProgress * 3;
-  const shaderBrightness = reducedMotion ? 1 : 1 - scrollProgress * 0.3;
-
-  // Cap DPR at 1 on mobile to halve GPU fill-rate cost
-  const canvasDpr: [number, number] = isMobile ? [1, 1] : [1, 2];
+  };
 
   return (
     <PlayingProvider>
     {/* Top-right controls */}
     <div className='fixed top-6 right-6 z-50 flex flex-col items-end gap-3'>
-      <RoseNav activeIndex={activeSection} total={4} onNavigate={(i) => scrollToSectionRef.current(i)} />
+      <RoseNav activeIndex={currentPage} total={TOTAL_PAGES} onNavigate={goToPage} />
       <button
         onClick={() => setAboutOpen(true)}
         className='px-5 py-2 rounded-full border border-white/20 text-white/50 text-sm font-medium hover:border-white/40 hover:text-white/80 transition-all duration-300 backdrop-blur-sm'
@@ -421,142 +401,131 @@ export default function Home() {
 
     <LoadingScreen ready={allReady} />
 
-    {/* Use 100dvh (dynamic viewport height) instead of 100vh — fixes iOS Safari where
-        the browser chrome eats into the viewport, causing content to be cut off. */}
-    <main ref={mainRef} className='h-[100dvh] overflow-y-auto bg-[#0a0a0a]'>
-      {/* Landing Section - 1 Album with Full-Height Water Shader */}
-      <section
-        ref={landingRef}
-        className='h-[100dvh] w-full bg-[#030304] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden'
+    {/* All sections stacked, visibility controlled by currentPage */}
+    <main className='h-[100dvh] w-full bg-black relative overflow-hidden'>
+
+      {/* ── Water Shader — fixed overlay, fades out when leaving landing ── */}
+      <div
+        className='fixed inset-0 z-10 pointer-events-none'
+        style={{
+          opacity: (isLanding && exitingPage !== 0) ? 1 : 0,
+          visibility: (isLanding || exitingPage === 0) ? 'visible' : 'hidden',
+          transition: `opacity ${EXIT_DURATION + 200}ms ${EASE_OUT_EXPO}`,
+        }}
       >
-        {/* Water Shader — fixed to the viewport so it stays in place as the
-            snap scroll happens, then fades out as the ROZSA section rises up
-            from below ("diving under the surface" effect).
-            Falls back to position: absolute for prefers-reduced-motion so
-            the water just scrolls away naturally with the section. */}
-        <motion.div
-          className='water-shader-container inset-0 w-full h-full'
+        <div
           style={{
-            position: reducedMotion ? 'absolute' : 'fixed',
-            zIndex: 10,
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: '#030304',
+            opacity: waterReady ? 0 : 1,
+            transition: 'opacity 1.2s ease-in-out',
             pointerEvents: 'none',
-            visibility: scrollProgress >= 1 ? 'hidden' : 'visible',
-            opacity: reducedMotion ? 1 : Math.max(0, 1 - scrollProgress),
-            filter: `blur(${shaderBlur}px) brightness(${shaderBrightness})`,
+            zIndex: 1,
+          }}
+        />
+        <Canvas
+          orthographic
+          camera={{ zoom: 1, position: [0, 0, 1], near: 0.1, far: 1000 }}
+          gl={{ alpha: true, antialias: false, preserveDrawingBuffer: true }}
+          style={{ width: '100%', height: '100%', display: 'block' }}
+          dpr={canvasDpr}
+          frameloop={currentPage <= 1 ? 'always' : 'never'}
+          onCreated={({ gl }) => {
+            gl.domElement.style.pointerEvents = 'none';
+            gl.domElement.style.touchAction = 'auto';
+            if (gl.domElement.parentElement) {
+              gl.domElement.parentElement.style.pointerEvents = 'none';
+              gl.domElement.parentElement.style.touchAction = 'auto';
+            }
+            setTimeout(() => setWaterReady(true), 200);
           }}
         >
-          {/* Covers the shader canvas until it's rendered, then fades out */}
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              backgroundColor: '#030304',
-              opacity: waterReady ? 0 : 1,
-              transition: 'opacity 1.2s ease-in-out',
-              pointerEvents: 'none',
-              zIndex: 1,
-            }}
-          />
+          <WaterShader scrollProgress={isLanding ? 0 : 1} lowQuality={isMobile} />
+        </Canvas>
+      </div>
+
+      {/* ── Page 0: Landing ── */}
+      <section
+        className='absolute inset-0 flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8'
+        style={getPageStyle(0)}
+      >
+        <div className='max-w-7xl w-full relative z-30 flex items-center justify-center'>
+          <MusicArtwork artist={landingRecord.artist} music={landingRecord.music} albumArt={landingRecord.albumArt} audioSrc={landingRecord.audioSrc} isSong={landingRecord.isSong} plasticWrap={landingRecord.plasticWrap} subjects={landingRecord.subjects} priority onImageReady={() => setAlbumReady(true)} />
+        </div>
+      </section>
+
+      {/* ── Page 1: ROZSA Shader Scene ── */}
+      <section
+        className='absolute inset-0 bg-black'
+        style={{
+          ...getPageStyle(1),
+          contain: 'layout style paint',
+        }}
+      >
+        <ShaderScene lowQuality={isMobile} active={currentPage === 1} />
+      </section>
+
+      {/* ── Page 2: New Eye (Ice Cube) ── */}
+      <section
+        className='absolute inset-0 bg-black flex items-center justify-center'
+        style={{
+          ...getPageStyle(2),
+          contain: 'layout style paint',
+        }}
+      >
+        {/* Fluid overlay background */}
+        <div className='absolute inset-0 z-0 overflow-hidden transition-opacity duration-[3000ms]' style={{ opacity: isNewEye ? 1 : 0 }}>
           <Canvas
             orthographic
             camera={{ zoom: 1, position: [0, 0, 1], near: 0.1, far: 1000 }}
-            gl={{ alpha: true, antialias: false, preserveDrawingBuffer: true }}
-            style={{ width: '100%', height: '100%', display: 'block' }}
-            dpr={canvasDpr}
-            frameloop={scrollProgress >= 1 ? 'never' : 'always'}
-            onCreated={({ gl }) => {
-              gl.domElement.style.pointerEvents = 'none';
-              gl.domElement.style.touchAction = 'auto';
-              if (gl.domElement.parentElement) {
-                gl.domElement.parentElement.style.pointerEvents = 'none';
-                gl.domElement.parentElement.style.touchAction = 'auto';
-              }
-              setTimeout(() => setWaterReady(true), 200);
-            }}
+            gl={{ alpha: true, antialias: false }}
+            style={{ width: '100%', height: '100%' }}
+            dpr={[1, 1]}
+            frameloop={isNewEye ? 'always' : 'never'}
           >
-            <WaterShader scrollProgress={scrollProgress} lowQuality={isMobile} />
+            <FluidOverlay blue />
           </Canvas>
-        </motion.div>
-
-        {/* Darkening Overlay — z-20 keeps it in front of the fixed water (z-10) */}
-        <motion.div
-          className='absolute inset-0 z-20 pointer-events-none'
-          style={{
-            backgroundColor: 'rgba(0, 0, 0, 0.6)',
-            opacity: overlayOpacity,
-          }}
-        />
-
-        {/* Single Album - Centered — z-30 keeps it above water (z-10) and overlay (z-20) */}
-        <motion.div
-          className='max-w-7xl w-full relative z-30 flex items-center justify-center'
-          style={{
-            opacity: albumOpacity,
-            y: albumY,
-            scale: albumScale,
-          }}
-        >
-          <MusicArtwork artist={landingRecord.artist} music={landingRecord.music} albumArt={landingRecord.albumArt} audioSrc={landingRecord.audioSrc} isSong={landingRecord.isSong} plasticWrap={landingRecord.plasticWrap} subjects={landingRecord.subjects} priority onImageReady={() => setAlbumReady(true)} />
-        </motion.div>
-      </section>
-
-      {/* Page 1 - ROZSA Shader Scene */}
-      <section ref={rozsaRef} className='h-[100dvh] w-full relative bg-black' style={{ contain: 'layout style paint' }}>
-        <ShaderScene lowQuality={isMobile} />
-      </section>
-
-      {/* Page 2 - New Eye (Opens) */}
-      <section ref={newEyeRef} className='h-[100dvh] w-full bg-black flex items-center justify-center relative' style={{ contain: 'layout style paint' }}>
-        {newEyeShaderMounted && (
-          <div className='absolute inset-0 z-0 overflow-hidden transition-opacity duration-[5000ms]' style={{ opacity: newEyeVisible ? 1 : 0 }}>
-            <Canvas
-              orthographic
-              camera={{ zoom: 1, position: [0, 0, 1], near: 0.1, far: 1000 }}
-              gl={{ alpha: true, antialias: false }}
-              style={{ width: '100%', height: '100%' }}
-              dpr={[1, 1]}
-              frameloop={newEyeVisible ? 'always' : 'never'}
-            >
-              <FluidOverlay blue />
-            </Canvas>
-          </div>
-        )}
+        </div>
         <div className='absolute inset-x-0 top-0 h-2/5 bg-gradient-to-b from-black via-black/50 to-transparent pointer-events-none z-10' />
         <div className='absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black via-black/50 to-transparent pointer-events-none z-10' />
         <div className='relative z-20'>
           <div className='relative'>
-            {/* Album — CSS 3D rotation matches the Three.js cube */}
             <div ref={albumWrapRef} className='relative z-50 translate-x-3 sm:translate-x-4 scale-[0.85] sm:scale-90' style={{ transition: 'transform 0.3s ease-out' }}>
               <MusicArtwork artist={newEyeRecord.artist} music={newEyeRecord.music} albumArt={newEyeRecord.albumArt} audioSrc={newEyeRecord.audioSrc} isSong={newEyeRecord.isSong} plasticWrap={newEyeRecord.plasticWrap} subjects={newEyeRecord.subjects} frosted={!isMobile} />
             </div>
-            {/* Ice cube canvas — only mounted when section visible */}
-            {newEyeShaderMounted && (
-              <div className='absolute -inset-28 sm:-inset-40 z-40 pointer-events-none transition-opacity duration-[3000ms]' style={{ opacity: newEyeVisible ? 1 : 0 }}>
-                <Canvas
-                  camera={{ position: [0, 0, 5], fov: 40 }}
-                  gl={{ alpha: true, antialias: true }}
-                  style={{ width: '100%', height: '100%' }}
-                  dpr={canvasDpr}
-                  frameloop={newEyeVisible ? 'always' : 'never'}
-                  onCreated={({ gl }) => {
-                    gl.domElement.style.pointerEvents = 'none';
-                    gl.domElement.style.touchAction = 'auto';
-                    if (gl.domElement.parentElement) {
-                      gl.domElement.parentElement.style.pointerEvents = 'none';
-                      gl.domElement.parentElement.style.touchAction = 'auto';
-                    }
-                  }}
-                >
-                  <IceCube3D tiltRef={iceTiltRef} scale={isMobile ? 1.75 : 2.0} />
-                </Canvas>
-              </div>
-            )}
+            {/* Ice cube */}
+            <div className='absolute -inset-28 sm:-inset-40 z-40 pointer-events-none transition-opacity duration-[3000ms]' style={{ opacity: isNewEye ? 1 : 0 }}>
+              <Canvas
+                camera={{ position: [0, 0, 5], fov: 40 }}
+                gl={{ alpha: true, antialias: true }}
+                style={{ width: '100%', height: '100%' }}
+                dpr={canvasDpr}
+                frameloop={isNewEye ? 'always' : 'never'}
+                onCreated={({ gl }) => {
+                  gl.domElement.style.pointerEvents = 'none';
+                  gl.domElement.style.touchAction = 'auto';
+                  if (gl.domElement.parentElement) {
+                    gl.domElement.parentElement.style.pointerEvents = 'none';
+                    gl.domElement.parentElement.style.touchAction = 'auto';
+                  }
+                }}
+              >
+                <IceCube3D tiltRef={iceTiltRef} scale={isMobile ? 1.75 : 2.0} />
+              </Canvas>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Page 3 - Social Links */}
-      <section className='h-[100dvh] w-full bg-black flex items-center justify-center' style={{ contain: 'layout style paint' }}>
+      {/* ── Page 3: Social Links ── */}
+      <section
+        className='absolute inset-0 bg-black flex items-center justify-center'
+        style={{
+          ...getPageStyle(3),
+          contain: 'layout style paint',
+        }}
+      >
         <div className='flex flex-col sm:flex-row items-center gap-8 sm:gap-10'>
           {socialLinks.map((link) => (
             <a
