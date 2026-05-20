@@ -165,7 +165,7 @@ export default function Home() {
     const rozsaEl = rozsaRef.current;
     const rozsaObserver = rozsaEl ? new IntersectionObserver(([entry]) => {
       setRozsaVisible(entry.isIntersecting);
-    }, { threshold: 0.1 }) : null;
+    }, { threshold: 0, rootMargin: '50% 0px' }) : null;
     if (rozsaEl) rozsaObserver!.observe(rozsaEl);
 
     return () => { premountObserver.disconnect(); visibleObserver.disconnect(); rozsaObserver?.disconnect(); if (unmountTimer) clearTimeout(unmountTimer); };
