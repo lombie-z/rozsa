@@ -129,7 +129,6 @@ export default function Home() {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [waterReady, setWaterReady] = useState(false);
   const [albumReady, setAlbumReady] = useState(false);
-  const [rozsaVisible, setRozsaVisible] = useState(false);
   const allReady = waterReady && albumReady;
 
   // Fallback: never get stuck on the loading screen
@@ -162,13 +161,7 @@ export default function Home() {
     premountObserver.observe(el);
     visibleObserver.observe(el);
 
-    const rozsaEl = rozsaRef.current;
-    const rozsaObserver = rozsaEl ? new IntersectionObserver(([entry]) => {
-      setRozsaVisible(entry.isIntersecting);
-    }, { threshold: 0, rootMargin: '50% 0px' }) : null;
-    if (rozsaEl) rozsaObserver!.observe(rozsaEl);
-
-    return () => { premountObserver.disconnect(); visibleObserver.disconnect(); rozsaObserver?.disconnect(); if (unmountTimer) clearTimeout(unmountTimer); };
+    return () => { premountObserver.disconnect(); visibleObserver.disconnect(); if (unmountTimer) clearTimeout(unmountTimer); };
   }, []);
 
   const isMobile = useIsMobile();
@@ -509,7 +502,7 @@ export default function Home() {
 
       {/* Page 1 - ROZSA Shader Scene */}
       <section ref={rozsaRef} className='h-[100dvh] w-full relative bg-black' style={{ contain: 'layout style paint' }}>
-        <ShaderScene lowQuality={isMobile} visible={rozsaVisible} />
+        <ShaderScene lowQuality={isMobile} />
       </section>
 
       {/* Page 2 - New Eye (Opens) */}
