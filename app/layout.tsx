@@ -27,8 +27,20 @@ const lato = Lato({
 export const metadata: Metadata = {
   title: "I. Rozsa",
   description: "Isaac Rozsa. Sydney-based bedroom producer and composer. Check out my site 🉑.",
+  metadataBase: new URL("https://isaacrozsa.com"),
   icons: {
     icon: '/favicon.svg',
+  },
+  openGraph: {
+    title: "I. Rozsa",
+    description: "Isaac Rozsa. Sydney-based bedroom producer and composer. Check out my site 🉑.",
+    type: "website",
+    siteName: "I. Rozsa",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "I. Rozsa",
+    description: "Isaac Rozsa. Sydney-based bedroom producer and composer.",
   },
 };
 
