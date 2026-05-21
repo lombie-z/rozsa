@@ -17,7 +17,7 @@ function FlowerModel() {
   const { nodes, materials } = useGLTF('/DesertLily.glb') as any;
   const ref = useRef<THREE.Mesh>(null);
   useFrame((_, delta) => { if (ref.current) ref.current.rotation.y += delta * 0.5; });
-  return <mesh ref={ref} geometry={nodes.DeserLily_Mesh.geometry} material={materials.DeserLily_Mat} scale={0.35} rotation={[0.3, 0, 0.1]} />;
+  return <mesh ref={ref} geometry={nodes.DeserLily_Mesh.geometry} material={materials.DeserLily_Mat} scale={0.28} position={[0, -0.3, 0]} rotation={[0.3, 0, 0.1]} />;
 }
 
 const ShaderScene = dynamic(() => import('@/components/shader-scene'), { ssr: false });
@@ -537,10 +537,11 @@ export default function Home() {
             href="https://goodtalk.isaacrozsa.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="group relative py-2 text-3xl sm:text-4xl transition-[filter] duration-500 hover:drop-shadow-[0_0_24px_rgba(236,64,122,0.6)]"
+            className="group relative py-2 text-3xl sm:text-4xl self-end"
           >
-            <span className="block w-[1.4em] h-[1.4em] overflow-visible">
-              <Canvas camera={{ position: [0, 0, 3.5], fov: 45 }} style={{ width: '100%', height: '100%', overflow: 'visible' }} gl={{ alpha: true }}>
+            <span className="relative block w-[1.2em] h-[1em]">
+              <span className="absolute inset-0 rounded-full bg-pink-500/0 group-hover:bg-pink-500/15 shadow-[0_0_0_0_rgba(236,64,122,0)] group-hover:shadow-[0_0_24px_8px_rgba(236,64,122,0.4)] transition-all duration-500" />
+              <Canvas camera={{ position: [0, 0.2, 4.5], fov: 35 }} style={{ width: '100%', height: '100%' }} gl={{ alpha: true }}>
                 <ambientLight intensity={0.8} />
                 <directionalLight position={[3, 4, 2]} intensity={1} />
                 <FlowerModel />
