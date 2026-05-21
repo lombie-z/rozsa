@@ -29,7 +29,7 @@ function FlowerModel({ hovered }: { hovered: boolean }) {
   });
 
   return (
-    <mesh ref={ref} geometry={nodes.DeserLily_Mesh.geometry} scale={0.45} position={[0, -0.2, 0]} rotation={[0.3, 0, 0.1]}>
+    <mesh ref={ref} geometry={nodes.DeserLily_Mesh.geometry} scale={0.35} position={[0, -0.9, 0]} rotation={[0.3, 0, 0.1]}>
       <meshStandardMaterial
         ref={matRef}
         {...materials.DeserLily_Mat}
@@ -52,7 +52,7 @@ function FlowerLink() {
       onMouseLeave={() => setHovered(false)}
     >
       <span className="block" style={{ width: 48, height: 48 }}>
-        <Canvas camera={{ position: [0, 0, 3.2], fov: 40 }} style={{ width: '100%', height: '100%' }} gl={{ alpha: true }}>
+        <Canvas camera={{ position: [0, 0, 3], fov: 40 }} style={{ width: '100%', height: '100%' }} gl={{ alpha: true }}>
           <ambientLight intensity={0.8} />
           <directionalLight position={[3, 4, 2]} intensity={1} />
           <FlowerModel hovered={hovered} />
