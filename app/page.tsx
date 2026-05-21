@@ -47,9 +47,11 @@ const socialLinks = [
       <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.6 14.4a.6.6 0 0 1-.84.2c-2.3-1.4-5.2-1.72-8.6-.94a.6.6 0 1 1-.28-1.18c3.74-.86 6.94-.48 9.52 1.08a.6.6 0 0 1 .2.84zm1.24-2.72a.78.78 0 0 1-1.06.26c-2.64-1.62-6.66-2.1-9.78-1.14a.78.78 0 0 1-.44-1.5c3.56-1.08 7.98-.56 11.02 1.3a.78.78 0 0 1 .26 1.08zm.1-2.82c-3.16-1.88-8.36-2.06-11.38-1.14a.94.94 0 1 1-.54-1.8c3.46-1.06 9.22-.86 12.86 1.32a.94.94 0 0 1-.94 1.62z" />
     </svg>
   )},
-  { name: 'YouTube', href: '#', disabled: true, icon: (
+  { name: 'Good Talk', href: 'https://goodtalk.isaacrozsa.com', disabled: false, icon: (
     <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-      <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1c.3-1.9.5-3.8.5-5.8s-.2-3.9-.5-5.8zM9.5 15.6V8.4l6.3 3.6-6.3 3.6z" />
+      <ellipse cx="12" cy="8" rx="4" ry="6.5" fill="currentColor" opacity="0.9" transform="rotate(-12 12 8)"/>
+      <ellipse cx="12" cy="8" rx="4" ry="6.5" fill="currentColor" opacity="0.7" transform="rotate(12 12 8)"/>
+      <rect x="11.2" y="13" width="1.6" height="8" rx="0.8" fill="currentColor" opacity="0.6"/>
     </svg>
   )},
 ];
