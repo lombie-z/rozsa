@@ -26,7 +26,7 @@ const lato = Lato({
 
 export const metadata: Metadata = {
   title: "I. Rozsa",
-  description: "Isaac Rozsa — music, visuals, and everything in between.",
+  description: "Isaac Rozsa. Sydney-based bedroom producer and composer. Check out my site 🉑.",
   icons: {
     icon: '/favicon.svg',
   },
