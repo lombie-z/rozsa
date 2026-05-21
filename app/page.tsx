@@ -3,12 +3,22 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { useGLTF } from '@react-three/drei';
+import * as THREE from 'three';
 import MusicArtwork from '@/components/record';
 import RoseNav from '@/components/rose-nav';
 import LoadingScreen from '@/components/loading-screen';
 import { useIsMobile, usePrefersReducedMotion } from '@/lib/use-mobile';
 import { PlayingProvider, usePlaying } from '@/lib/playing-context';
+
+function FlowerModel() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { nodes, materials } = useGLTF('/DesertLily.glb') as any;
+  const ref = useRef<THREE.Mesh>(null);
+  useFrame((_, delta) => { if (ref.current) ref.current.rotation.y += delta * 0.5; });
+  return <mesh ref={ref} geometry={nodes.DeserLily_Mesh.geometry} material={materials.DeserLily_Mat} scale={0.35} rotation={[0.3, 0, 0.1]} />;
+}
 
 const ShaderScene = dynamic(() => import('@/components/shader-scene'), { ssr: false });
 const WaterShader = dynamic(() => import('@/components/water-shader').then((mod) => ({ default: mod.WaterShader })), { ssr: false });
@@ -45,13 +55,6 @@ const socialLinks = [
   { name: 'Spotify', href: '#', disabled: true, icon: (
     <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
       <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.6 14.4a.6.6 0 0 1-.84.2c-2.3-1.4-5.2-1.72-8.6-.94a.6.6 0 1 1-.28-1.18c3.74-.86 6.94-.48 9.52 1.08a.6.6 0 0 1 .2.84zm1.24-2.72a.78.78 0 0 1-1.06.26c-2.64-1.62-6.66-2.1-9.78-1.14a.78.78 0 0 1-.44-1.5c3.56-1.08 7.98-.56 11.02 1.3a.78.78 0 0 1 .26 1.08zm.1-2.82c-3.16-1.88-8.36-2.06-11.38-1.14a.94.94 0 1 1-.54-1.8c3.46-1.06 9.22-.86 12.86 1.32a.94.94 0 0 1-.94 1.62z" />
-    </svg>
-  )},
-  { name: 'Good Talk', href: 'https://goodtalk.isaacrozsa.com', disabled: false, icon: (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-      <ellipse cx="12" cy="8" rx="4" ry="6.5" fill="currentColor" opacity="0.9" transform="rotate(-12 12 8)"/>
-      <ellipse cx="12" cy="8" rx="4" ry="6.5" fill="currentColor" opacity="0.7" transform="rotate(12 12 8)"/>
-      <rect x="11.2" y="13" width="1.6" height="8" rx="0.8" fill="currentColor" opacity="0.6"/>
     </svg>
   )},
 ];
@@ -529,6 +532,21 @@ export default function Home() {
         }}
       >
         <div className='flex flex-col sm:flex-row items-center gap-8 sm:gap-10'>
+          {/* 3D flower link to Good Talk */}
+          <a
+            href="https://goodtalk.isaacrozsa.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group relative py-2 text-3xl sm:text-4xl transition-[filter] duration-300 hover:drop-shadow-[0_0_18px_rgba(200,40,40,0.45)]"
+          >
+            <span className="block w-[1em] h-[1em]">
+              <Canvas camera={{ position: [0, 0, 4], fov: 40 }} style={{ width: '100%', height: '100%' }} gl={{ alpha: true }}>
+                <ambientLight intensity={0.8} />
+                <directionalLight position={[3, 4, 2]} intensity={1} />
+                <FlowerModel />
+              </Canvas>
+            </span>
+          </a>
           {socialLinks.map((link) => (
             <a
               key={link.name}
