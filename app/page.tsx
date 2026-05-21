@@ -12,12 +12,54 @@ import LoadingScreen from '@/components/loading-screen';
 import { useIsMobile, usePrefersReducedMotion } from '@/lib/use-mobile';
 import { PlayingProvider, usePlaying } from '@/lib/playing-context';
 
-function FlowerModel() {
+function FlowerModel({ hovered }: { hovered: boolean }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { nodes, materials } = useGLTF('/DesertLily.glb') as any;
   const ref = useRef<THREE.Mesh>(null);
-  useFrame((_, delta) => { if (ref.current) ref.current.rotation.y += delta * 0.5; });
-  return <mesh ref={ref} geometry={nodes.DeserLily_Mesh.geometry} material={materials.DeserLily_Mat} scale={0.45} position={[0, -0.2, 0]} rotation={[0.3, 0, 0.1]} />;
+  const matRef = useRef<THREE.MeshStandardMaterial>(null);
+  const glowRef = useRef(0);
+
+  useFrame((state, delta) => {
+    if (ref.current) ref.current.rotation.y += delta * 0.5;
+    glowRef.current += ((hovered ? 1 : 0) - glowRef.current) * 0.08;
+    if (matRef.current) {
+      const pulse = Math.sin(state.clock.elapsedTime * 1.5) * 0.5 + 0.5;
+      matRef.current.emissiveIntensity = glowRef.current * (0.4 + pulse * 0.8);
+    }
+  });
+
+  return (
+    <mesh ref={ref} geometry={nodes.DeserLily_Mesh.geometry} scale={0.45} position={[0, -0.2, 0]} rotation={[0.3, 0, 0.1]}>
+      <meshStandardMaterial
+        ref={matRef}
+        {...materials.DeserLily_Mat}
+        emissive={new THREE.Color('#EC407A')}
+        emissiveIntensity={0.5}
+      />
+    </mesh>
+  );
+}
+
+function FlowerLink() {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <a
+      href="https://goodtalk.isaacrozsa.com"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="relative py-2 self-end"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <span className="block" style={{ width: 48, height: 48 }}>
+        <Canvas camera={{ position: [0, 0, 3.2], fov: 40 }} style={{ width: '100%', height: '100%' }} gl={{ alpha: true }}>
+          <ambientLight intensity={0.8} />
+          <directionalLight position={[3, 4, 2]} intensity={1} />
+          <FlowerModel hovered={hovered} />
+        </Canvas>
+      </span>
+    </a>
+  );
 }
 
 const ShaderScene = dynamic(() => import('@/components/shader-scene'), { ssr: false });
@@ -533,20 +575,7 @@ export default function Home() {
       >
         <div className='flex flex-col sm:flex-row items-center gap-8 sm:gap-10'>
           {/* 3D flower link to Good Talk */}
-          <a
-            href="https://goodtalk.isaacrozsa.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group relative py-2 self-end transition-[filter] duration-300 hover:drop-shadow-[0_0_18px_rgba(200,40,40,0.45)]"
-          >
-            <span className="block" style={{ width: 48, height: 48 }}>
-              <Canvas camera={{ position: [0, 0, 3.2], fov: 40 }} style={{ width: '100%', height: '100%' }} gl={{ alpha: true }}>
-                <ambientLight intensity={0.8} />
-                <directionalLight position={[3, 4, 2]} intensity={1} />
-                <FlowerModel />
-              </Canvas>
-            </span>
-          </a>
+          <FlowerLink />
           {socialLinks.map((link) => (
             <a
               key={link.name}
