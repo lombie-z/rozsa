@@ -40,6 +40,113 @@ function FlowerModel({ hovered }: { hovered: boolean }) {
   );
 }
 
+function SelectionLink() {
+  const [hovered, setHovered] = useState(false);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const frameRef = useRef(0);
+  const phaseRef = useRef(0);
+
+  const basePoints = [
+    { x: 14, y: 8 },
+    { x: 34, y: 8 },
+    { x: 24, y: 32 },
+  ];
+
+  useEffect(() => {
+    let raf: number;
+    const animate = () => {
+      frameRef.current += 0.015;
+      phaseRef.current = frameRef.current % 6;
+      const svg = svgRef.current;
+      if (!svg) { raf = requestAnimationFrame(animate); return; }
+
+      const t = frameRef.current;
+      const drift = hovered ? 0 : 1;
+      const pts = basePoints.map((p, i) => ({
+        x: p.x + Math.sin(t * 0.7 + i * 2.1) * 4 * drift,
+        y: p.y + Math.cos(t * 0.9 + i * 1.7) * 3 * drift,
+      }));
+
+      const phase = phaseRef.current;
+      const lines = svg.querySelectorAll('line');
+      const rects = svg.querySelectorAll('rect');
+
+      for (let i = 0; i < 3; i++) {
+        const from = pts[i];
+        const to = pts[(i + 1) % 3];
+        const line = lines[i];
+        const rect = rects[i];
+        if (!line || !rect) continue;
+
+        rect.setAttribute('x', String(from.x - 3));
+        rect.setAttribute('y', String(from.y - 3));
+
+        const segmentPhase = phase - i * 1.2;
+        if (segmentPhase < 0) {
+          line.setAttribute('opacity', '0');
+        } else if (segmentPhase < 0.8) {
+          const p = segmentPhase / 0.8;
+          line.setAttribute('x1', String(from.x));
+          line.setAttribute('y1', String(from.y));
+          line.setAttribute('x2', String(from.x + (to.x - from.x) * p));
+          line.setAttribute('y2', String(from.y + (to.y - from.y) * p));
+          line.setAttribute('opacity', '1');
+        } else {
+          line.setAttribute('x1', String(from.x));
+          line.setAttribute('y1', String(from.y));
+          line.setAttribute('x2', String(to.x));
+          line.setAttribute('y2', String(to.y));
+          line.setAttribute('opacity', '1');
+        }
+
+        rect.setAttribute('opacity', segmentPhase >= -0.3 ? '1' : '0');
+      }
+
+      raf = requestAnimationFrame(animate);
+    };
+    raf = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf);
+  }, [hovered]);
+
+  return (
+    <a
+      href="https://arrythmia.isaacrozsa.com"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="relative py-2 self-end"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        filter: hovered
+          ? 'drop-shadow(0 0 14px rgba(37, 99, 235, 0.6))'
+          : 'drop-shadow(0 0 0px transparent)',
+        transition: 'filter 300ms ease-out',
+      }}
+    >
+      <svg
+        ref={svgRef}
+        viewBox="0 0 48 40"
+        style={{ width: 48, height: 40 }}
+      >
+        <line stroke="#2563eb" strokeWidth={1.2} opacity={0} />
+        <line stroke="#2563eb" strokeWidth={1.2} opacity={0} />
+        <line stroke="#2563eb" strokeWidth={1.2} opacity={0} />
+        {basePoints.map((_, i) => (
+          <rect
+            key={i}
+            width={6}
+            height={6}
+            fill="white"
+            stroke="#2563eb"
+            strokeWidth={0.8}
+            opacity={0}
+          />
+        ))}
+      </svg>
+    </a>
+  );
+}
+
 function FlowerLink() {
   const [hovered, setHovered] = useState(false);
   return (
@@ -574,6 +681,8 @@ export default function Home() {
         }}
       >
         <div className='flex flex-col sm:flex-row items-center gap-8 sm:gap-10'>
+          {/* Selection triangle link to Arrythmia */}
+          <SelectionLink />
           {/* 3D flower link to Good Talk */}
           <FlowerLink />
           {socialLinks.map((link) => (
