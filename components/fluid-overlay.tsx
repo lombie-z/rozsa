@@ -275,7 +275,8 @@ const FluidPlane: FC<{ light?: boolean; blue?: boolean }> = ({ light = false, bl
     u_aspect: { value: size.width / size.height },
   }), []);
 
-  useFrame((state, delta) => {
+  useFrame((state, rawDelta) => {
+    const delta = Math.min(rawDelta, 0.1);
     if (materialRef.current) {
       materialRef.current.uniforms.u_time.value += delta;
       materialRef.current.uniforms.u_aspect.value = state.size.width / state.size.height;

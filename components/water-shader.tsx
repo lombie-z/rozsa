@@ -288,7 +288,8 @@ export const WaterShader: React.FC<WaterShaderProps> = ({ scrollProgress = 0, lo
     }
   }, [size.width, size.height, scrollProgress]);
 
-  useFrame((state, delta) => {
+  useFrame((state, rawDelta) => {
+    const delta = Math.min(rawDelta, 0.1);
     if (materialRef.current?.uniforms) {
       timeRef.current += delta;
       materialRef.current.uniforms.iGlobalTime.value = timeRef.current;
