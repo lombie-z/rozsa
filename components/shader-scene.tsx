@@ -201,7 +201,8 @@ const ScreenPlane: FC<ScreenPlaneProps> = ({ animationState, amount, maxSteps, p
 
   const fragmentShader = useMemo(() => createFragmentShader(amount, maxSteps, precision), [amount, maxSteps, precision]);
 
-  useFrame((state, delta) => {
+  useFrame((state, rawDelta) => {
+    const delta = Math.min(rawDelta, 0.1);
     if (materialRef.current) {
       const target = active ? 1 : 0;
       intensityRef.current += (target - intensityRef.current) * Math.min(delta * 0.6, 1);
