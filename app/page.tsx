@@ -110,7 +110,7 @@ function SelectionLink() {
 
   return (
     <a
-      href="https://arrythmia.isaacrozsa.com"
+      href="https://arrhythmia.isaacrozsa.com"
       target="_blank"
       rel="noopener noreferrer"
       className="relative py-2 self-end"
