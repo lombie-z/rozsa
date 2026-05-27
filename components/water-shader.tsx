@@ -13,7 +13,7 @@ const QUALITY = {
   low:  { NUM_STEPS: 4, ITER_GEOMETRY: 2, ITER_FRAGMENT: 3 },
 } as const;
 const SEA_HEIGHT = 0.6;
-const SEA_CHOPPY = 1.0;
+const SEA_CHOPPY = 4.0;
 const SEA_SPEED = 1.0;
 const SEA_FREQ = 0.16;
 // Changed to red/black theme
@@ -154,19 +154,21 @@ const createFragmentShader = (lowQuality: boolean) => {
 
   vec3 getSeaColor(
     vec3 p,
-    vec3 n, 
-    vec3 l, 
-    vec3 eye, 
-    vec3 dist
-  ) {  
-    float fresnel = 1.0 - max(dot(n,-eye),0.0);
-    fresnel = pow(fresnel,3.0) * 0.65;
-    vec3 reflected = getSkyColor(reflect(eye,n));    
-    vec3 refracted = SEA_BASE + diffuse(n,l,80.0) * SEA_WATER_COLOR * 0.12; 
+    vec3 n,
+    vec3 l,
+    vec3 eye,
+    vec3 dist,
+    float centerWeight
+  ) {
+    float fresnel = clamp(1.0 - dot(n,-eye), 0.0, 1.0);
+    fresnel = min(fresnel * fresnel * fresnel, 0.5);
+    vec3 reflected = getSkyColor(reflect(eye,n));
+    vec3 refracted = SEA_BASE + diffuse(n,l,80.0) * SEA_WATER_COLOR * 0.12;
     vec3 color = mix(refracted,reflected,fresnel);
     float atten = max(1.0 - dot(dist,dist) * 0.001, 0.0);
     color += SEA_WATER_COLOR * (p.y - SEA_HEIGHT) * 0.18 * atten;
-    color += vec3(specular(n,l,eye,60.0));
+    float spec = specular(n,l,eye,80.0) * (0.3 + centerWeight * 1.7);
+    color *= 1.0 - clamp(spec, 0.0, 0.8);
     return color;
   }
 
@@ -236,11 +238,13 @@ const createFragmentShader = (lowQuality: boolean) => {
       dot(dist,dist) * epsilonNrm,
       seaTime
     );
-    vec3 light = normalize(vec3(0.0,1.0,0.8)); 
+    vec3 light = normalize(vec3(0.0,1.0,-0.8));
+    float screenDist = length(uv);
+    float centerWeight = exp(-screenDist * screenDist * 0.3);
     // color
     vec3 color = mix(
       getSkyColor(dir),
-      getSeaColor(p,n,light,dir,dist),
+      getSeaColor(p,n,light,dir,dist,centerWeight),
       pow(smoothstep(0.0,-0.05,dir.y),0.3)
     );
     
@@ -254,7 +258,7 @@ const createFragmentShader = (lowQuality: boolean) => {
     color = mix(color, vec3(0.0, 0.0, 0.0), depthFog * (0.3 + u_scrollProgress * 0.4));
     
     // post
-    gl_FragColor = vec4(pow(color,vec3(0.75)), 1.0);
+    gl_FragColor = vec4(pow(color,vec3(0.65)), 1.0);
   }
 `;
 };
