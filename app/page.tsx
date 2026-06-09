@@ -174,7 +174,7 @@ const WaterShader = dynamic(() => import('@/components/water-shader').then((mod)
 const FluidOverlay = dynamic(() => import('@/components/fluid-overlay'), { ssr: false });
 const IceCube3D = dynamic(() => import('@/components/ice-cube-3d'), { ssr: false });
 
-const landingRecord = { artist: 'Isaac Rozsa', music: 'Prologue', albumArt: '/albums/new-eye-opens.png', audioSrc: '/audio/new-eye-opens.mp3', isSong: true, plasticWrap: 1 as const, subjects: ['/subject.png', '/subject2.png'] as [string, string] };
+const landingRecord = { artist: 'Isaac Rozsa', music: 'Prologue', albumArt: '/albums/new-eye-opens.png', audioSrc: '/audio/solemn8.mp3', isSong: true, plasticWrap: 1 as const, subjects: ['/subject.png', '/subject2.png'] as [string, string] };
 const newEyeRecord = { artist: 'Isaac Rozsa', music: 'Dude Like Dust', albumArt: '/albums/dude-like-dust.png', audioSrc: '/audio/dude-like-dust.mp3', isSong: true, plasticWrap: 2 as const, subjects: ['/subject3.png', '/subject3.png'] as [string, string] };
 
 const socialLinks = [
