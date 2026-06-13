@@ -39,6 +39,11 @@ const FROST_COUNT = FROST_AREAS * FROST_AREAS;
 const frostStyles = `
   .frost-card {
     filter: url(#frost-card-filter);
+    /* Promote to its own layer so the expensive SVG frost filter is rasterised
+       once and ancestor tilt/animation just composites the cached bitmap. Stops
+       the turbulence "swimming" and the jank when the card moves with the cursor. */
+    will-change: transform;
+    transform: translateZ(0);
   }
   .frost-card-grid {
     position: absolute;
