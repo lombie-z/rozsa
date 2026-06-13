@@ -172,9 +172,8 @@ function FlowerLink() {
 const ShaderScene = dynamic(() => import('@/components/shader-scene'), { ssr: false });
 const WaterShader = dynamic(() => import('@/components/water-shader').then((mod) => ({ default: mod.WaterShader })), { ssr: false });
 const FluidOverlay = dynamic(() => import('@/components/fluid-overlay'), { ssr: false });
-const IceCube3D = dynamic(() => import('@/components/ice-cube-3d'), { ssr: false });
 
-const landingRecord = { artist: 'Isaac Rozsa', music: 'Prologue', albumArt: '/albums/new-eye-opens.png', audioSrc: '/audio/solemn8.mp3', isSong: true, plasticWrap: 1 as const, subjects: ['/subject.png', '/subject2.png'] as [string, string] };
+const landingRecord = { artist: 'Isaac Rozsa', music: 'Prologue', albumArt: '/albums/new-eye-opens.png', audioSrc: '/audio/solemn9.mp3', isSong: true, plasticWrap: 1 as const, subjects: ['/subject.png', '/subject2.png'] as [string, string] };
 const newEyeRecord = { artist: 'Isaac Rozsa', music: 'Dude Like Dust', albumArt: '/albums/dude-like-dust.png', audioSrc: '/audio/dude-like-dust.mp3', isSong: true, plasticWrap: 2 as const, subjects: ['/subject3.png', '/subject3.png'] as [string, string] };
 
 const socialLinks = [
@@ -270,6 +269,7 @@ function VolumeControl() {
 export default function Home() {
   const iceTiltRef = useRef({ rx: 0, ry: 0 });
   const albumWrapRef = useRef<HTMLDivElement>(null);
+  const landingAlbumWrapRef = useRef<HTMLDivElement>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [waterReady, setWaterReady] = useState(false);
@@ -400,12 +400,12 @@ export default function Home() {
       iceTiltRef.current = { rx: y * 0.25, ry: x * 0.3 };
       if (!raf) {
         raf = requestAnimationFrame(() => {
-          if (albumWrapRef.current) {
-            const { rx, ry } = iceTiltRef.current;
-            const ryDeg = (ry * 180) / Math.PI;
-            const rxDeg = -(rx * 180) / Math.PI;
-            albumWrapRef.current.style.transform = `perspective(900px) rotateY(${ryDeg}deg) rotateX(${rxDeg}deg)`;
-          }
+          const { rx, ry } = iceTiltRef.current;
+          const ryDeg = (ry * 180) / Math.PI;
+          const rxDeg = -(rx * 180) / Math.PI;
+          const t = `perspective(900px) rotateY(${ryDeg}deg) rotateX(${rxDeg}deg)`;
+          if (albumWrapRef.current) albumWrapRef.current.style.transform = t;
+          if (landingAlbumWrapRef.current) landingAlbumWrapRef.current.style.transform = t;
           raf = null;
         });
       }
@@ -605,7 +605,13 @@ export default function Home() {
         style={getPageStyle(0)}
       >
         <div className='max-w-7xl w-full relative z-30 flex items-center justify-center'>
-          <MusicArtwork artist={landingRecord.artist} music={landingRecord.music} albumArt={landingRecord.albumArt} audioSrc={landingRecord.audioSrc} isSong={landingRecord.isSong} plasticWrap={landingRecord.plasticWrap} subjects={landingRecord.subjects} priority onImageReady={() => setAlbumReady(true)} />
+          <div className='relative z-50 scale-[0.85] sm:scale-90'>
+            {/* Tight, square-ish drop shadow so the frosted glass reads against
+                the bright water (instead of washing out). */}
+            <div ref={landingAlbumWrapRef} style={{ transition: 'transform 0.3s ease-out', boxShadow: '0 0 48px 6px rgba(222, 168, 74, 0.45), 0 0 120px 30px rgba(196, 126, 46, 0.30)', willChange: 'transform' }}>
+              <MusicArtwork artist={landingRecord.artist} music={landingRecord.music} albumArt={landingRecord.albumArt} audioSrc={landingRecord.audioSrc} isSong={landingRecord.isSong} plasticWrap={landingRecord.plasticWrap} subjects={landingRecord.subjects} frosted={!isMobile} priority onImageReady={() => setAlbumReady(true)} />
+            </div>
+          </div>
         </div>
       </section>
 
@@ -645,28 +651,10 @@ export default function Home() {
         <div className='absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black via-black/50 to-transparent pointer-events-none z-10' />
         <div className='relative z-20'>
           <div className='relative'>
-            <div ref={albumWrapRef} className='relative z-50 translate-x-3 sm:translate-x-4 scale-[0.85] sm:scale-90' style={{ transition: 'transform 0.3s ease-out' }}>
-              <MusicArtwork artist={newEyeRecord.artist} music={newEyeRecord.music} albumArt={newEyeRecord.albumArt} audioSrc={newEyeRecord.audioSrc} isSong={newEyeRecord.isSong} plasticWrap={newEyeRecord.plasticWrap} subjects={newEyeRecord.subjects} frosted={!isMobile} />
-            </div>
-            {/* Ice cube */}
-            <div className='absolute -inset-28 sm:-inset-40 z-40 pointer-events-none transition-opacity duration-[3000ms]' style={{ opacity: isNewEye ? 1 : 0 }}>
-              <Canvas
-                camera={{ position: [0, 0, 5], fov: 40 }}
-                gl={{ alpha: true, antialias: true }}
-                style={{ width: '100%', height: '100%' }}
-                dpr={canvasDpr}
-                frameloop={isNewEye ? 'always' : 'never'}
-                onCreated={({ gl }) => {
-                  gl.domElement.style.pointerEvents = 'none';
-                  gl.domElement.style.touchAction = 'auto';
-                  if (gl.domElement.parentElement) {
-                    gl.domElement.parentElement.style.pointerEvents = 'none';
-                    gl.domElement.parentElement.style.touchAction = 'auto';
-                  }
-                }}
-              >
-                <IceCube3D tiltRef={iceTiltRef} scale={isMobile ? 1.75 : 2.0} />
-              </Canvas>
+            <div className='relative z-50 scale-[0.85] sm:scale-90'>
+              <div ref={albumWrapRef} style={{ transition: 'transform 0.3s ease-out', willChange: 'transform' }}>
+                <MusicArtwork artist={newEyeRecord.artist} music={newEyeRecord.music} albumArt={newEyeRecord.albumArt} audioSrc={newEyeRecord.audioSrc} isSong={newEyeRecord.isSong} plasticWrap={newEyeRecord.plasticWrap} subjects={newEyeRecord.subjects} frosted={!isMobile} />
+              </div>
             </div>
           </div>
         </div>

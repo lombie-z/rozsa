@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo, useEffect } from 'react';
+import { useRef, useMemo, useEffect, useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Plane } from '@react-three/drei';
 import * as THREE from 'three';
@@ -32,6 +32,8 @@ const createFragmentShader = (lowQuality: boolean) => {
   uniform float iGlobalTime;
   uniform vec2 iResolution;
   uniform float u_scrollProgress;
+  uniform sampler2D u_textTex;
+  uniform vec2 u_deviceRes;
 
   const int NUM_STEPS = ${q.NUM_STEPS};
   const float PI = 3.1415;
@@ -247,7 +249,21 @@ const createFragmentShader = (lowQuality: boolean) => {
       getSeaColor(p,n,light,dir,dist,centerWeight),
       pow(smoothstep(0.0,-0.05,dir.y),0.3)
     );
-    
+
+    // ── Album backlight: a warm radial glow centred on the record that fades to
+    // dark corners, so the background reads as light emitted from the album.
+    // Uses dpr-correct screen coords (u_deviceRes) so the centre tracks where the
+    // album actually sits, replacing the old upper-left red/black falloff.
+    {
+      vec2 gpos = gl_FragCoord.xy / u_deviceRes;
+      vec2 gd = gpos - vec2(0.5, 0.55);            // album centre (x, y-from-bottom)
+      gd.x *= u_deviceRes.x / u_deviceRes.y;       // aspect-correct -> circular
+      float gr = length(gd);
+      float glow = exp(-gr * gr * 5.0);            // falloff (higher = tighter halo)
+      color *= mix(0.04, 1.0, glow);               // vignette edges toward black
+      color += vec3(0.9, 0.5, 0.18) * glow * 0.30; // additive warm-gold light
+    }
+
     // Apply darkening and depth effects based on scroll progress
     // Darken colors as we go deeper (more black, less red)
     vec3 deepColor = mix(color, vec3(0.0, 0.0, 0.0), darkenFactor);
@@ -256,7 +272,37 @@ const createFragmentShader = (lowQuality: boolean) => {
     // Increase fog/attenuation for deeper water appearance
     float depthFog = 1.0 - exp(-dot(dist,dist) * (0.2 + u_scrollProgress * 0.3));
     color = mix(color, vec3(0.0, 0.0, 0.0), depthFog * (0.3 + u_scrollProgress * 0.4));
-    
+
+    // ── Scroll cue: polished "Scroll" laid onto the swell ──
+    // The word's alpha is mapped into a perspective band (trapezoid + arc) so it
+    // reclines onto the water at the sea's angle under the album, warped by the
+    // live wave normal and tinted gold; fades out as we dive.
+    {
+      float aspect = u_deviceRes.x / u_deviceRes.y;
+      vec2 sc = gl_FragCoord.xy / u_deviceRes - 0.5; // dpr-correct, centred, +y up
+      sc.x *= aspect;
+
+      const float T_CENTER_Y = -0.36; // vertical centre (low on the water, under the album)
+      const float T_WIDTH    = 0.72;  // half width
+      const float T_HEIGHT   = 0.15;  // half height (squashed -> reclined)
+      const float T_TILT     = 0.74;  // perspective: top edge narrower -> angled back
+      const float T_CURVE    = 0.30;  // arc: ends sweep up around the album
+
+      float hx = sc.x / T_WIDTH;
+      float yc = T_CENTER_Y + T_CURVE * hx * hx;
+      float tyLin = (sc.y - yc) / (2.0 * T_HEIGHT) + 0.5;
+      float persp = mix(1.0 + T_TILT, 1.0 - T_TILT, clamp(tyLin, 0.0, 1.0));
+      float tx = sc.x / (2.0 * T_WIDTH * persp) + 0.5;
+
+      vec2 cueUV = vec2(tx, tyLin);
+      float inBox = step(0.0, cueUV.x) * step(cueUV.x, 1.0) * step(0.0, cueUV.y) * step(cueUV.y, 1.0);
+      vec2 warp = vec2(n.x, n.z) * 0.05;
+      float txt = texture2D(u_textTex, clamp(cueUV + warp, 0.0, 1.0)).a * inBox;
+      txt *= (1.0 - u_scrollProgress);
+      vec3 inkColor = vec3(0.88, 0.74, 0.46); // warm gold
+      color = mix(color, inkColor, clamp(txt, 0.0, 1.0) * 0.68);
+    }
+
     // post
     gl_FragColor = vec4(pow(color,vec3(0.65)), 1.0);
   }
@@ -268,16 +314,67 @@ interface WaterShaderProps {
   lowQuality?: boolean;
 }
 
+// Canvas holding the polished "Scroll" word (single shape). The shader samples its
+// alpha and lays it into a perspective band on the water, tinted gold.
+const TEXT_CANVAS_W = 2048;
+const TEXT_CANVAS_H = 640;
+// On-screen footprint of the word within the canvas (centred), aspect 320:114.
+const WORD_W = TEXT_CANVAS_W * 0.56;
+const WORD_H = WORD_W * (114 / 320);
+
 export const WaterShader: React.FC<WaterShaderProps> = ({ scrollProgress = 0, lowQuality = false }) => {
   const { size } = useThree();
   const materialRef = useRef<THREE.ShaderMaterial>(null!);
   const timeRef = useRef(0);
+
+  // Offscreen canvas holding the polished "Scroll" word, uploaded as the texture
+  // the shader lays into a perspective band on the water and ripples with the waves.
+  const textCanvas = useMemo(() => {
+    if (typeof document === 'undefined') return null;
+    const c = document.createElement('canvas');
+    c.width = TEXT_CANVAS_W;
+    c.height = TEXT_CANVAS_H;
+    return c;
+  }, []);
+
+  const textTexture = useMemo(() => {
+    if (!textCanvas) return null;
+    const t = new THREE.CanvasTexture(textCanvas);
+    t.minFilter = THREE.LinearFilter;
+    t.magFilter = THREE.LinearFilter;
+    t.wrapS = THREE.ClampToEdgeWrapping;
+    t.wrapT = THREE.ClampToEdgeWrapping;
+    return t;
+  }, [textCanvas]);
+
+  const wordImgRef = useRef<HTMLImageElement | null>(null);
+
+  // Paint the polished word centred in the canvas (the shader handles the tilt).
+  const drawWord = useCallback(() => {
+    if (!textCanvas || !textTexture) return;
+    const ctx = textCanvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, TEXT_CANVAS_W, TEXT_CANVAS_H);
+    const img = wordImgRef.current;
+    if (img) ctx.drawImage(img, (TEXT_CANVAS_W - WORD_W) / 2, (TEXT_CANVAS_H - WORD_H) / 2, WORD_W, WORD_H);
+    textTexture.needsUpdate = true;
+  }, [textCanvas, textTexture]);
+
+  // Load the polished "Scroll" SVG, then paint it into the texture.
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => { wordImgRef.current = img; drawWord(); };
+    img.src = '/scroll-word.svg';
+    return () => { img.onload = null; };
+  }, [drawWord]);
 
   const uniforms = useMemo(
     () => ({
       iGlobalTime: { value: 0 },
       iResolution: { value: new THREE.Vector2(size.width, size.height) },
       u_scrollProgress: { value: 0 },
+      u_textTex: { value: textTexture },
+      u_deviceRes: { value: new THREE.Vector2(size.width, size.height) },
     }),
     []
   );
@@ -300,6 +397,8 @@ export const WaterShader: React.FC<WaterShaderProps> = ({ scrollProgress = 0, lo
       materialRef.current.uniforms.u_scrollProgress.value = scrollProgress;
       // Update resolution to match actual canvas pixel size
       materialRef.current.uniforms.iResolution.value.set(state.size.width, state.size.height);
+      // True drawing-buffer size (device px) for dpr-correct text placement
+      materialRef.current.uniforms.u_deviceRes.value.set(state.gl.domElement.width, state.gl.domElement.height);
     }
   });
 
