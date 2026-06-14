@@ -276,10 +276,11 @@ void main() {
     ring *= 1.0 - smoothstep(0.7, 1.0, p);             // dissipate near the end
     // Brief core flash at the album as it ignites — the missing "kick".
     float core = exp(-pd * pd * 9.0) * (1.0 - smoothstep(0.0, 0.35, p));
-    // Add clean cyan weighted by the fluid's structure — lights up the texture
-    // without amplifying its random red/cyan patches.
-    color += vec3(0.35, 0.82, 1.0) * ring * (0.45 + shape * 0.75);
-    color += vec3(0.45, 0.85, 1.0) * core * 0.7;
+    // Brand blue-green (bright form of the section-1 album glow vec3(0.10,0.55,0.62))
+    // weighted by the fluid's structure — lights up the texture without amplifying
+    // its random red/cyan patches.
+    color += vec3(0.16, 0.82, 0.95) * ring * (0.45 + shape * 0.75);
+    color += vec3(0.24, 0.88, 1.0) * core * 0.7;
     alpha = max(alpha, max(ring * (0.35 + shape * 0.4), core * 0.5));
   }
 

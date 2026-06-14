@@ -34,6 +34,7 @@ const createFragmentShader = (lowQuality: boolean) => {
   uniform float u_scrollProgress;
   uniform sampler2D u_textTex;
   uniform sampler2D u_textTexUp;
+  uniform sampler2D u_textGlow;
   uniform vec2 u_deviceRes;
 
   const int NUM_STEPS = ${q.NUM_STEPS};
@@ -274,6 +275,18 @@ const createFragmentShader = (lowQuality: boolean) => {
     float depthFog = 1.0 - exp(-dot(dist,dist) * (0.2 + u_scrollProgress * 0.3));
     color = mix(color, vec3(0.0, 0.0, 0.0), depthFog * (0.3 + u_scrollProgress * 0.4));
 
+    // Neon flicker — shared by the upright sign and its water reflection so they
+    // pulse in sync. Mostly steady, gentle shimmer, with the odd brief dip.
+    float ft = iGlobalTime;
+    float neonFlick = 0.9 + 0.08 * sin(ft * 5.3) + 0.04 * sin(ft * 17.0);
+    float nd1 = hash(vec2(floor(ft * 6.0), 3.0));
+    float nd2 = hash(vec2(floor(ft * 15.0), 7.0));
+    neonFlick *= nd1 < 0.03 ? 0.2 : 1.0;            // rare hard dip
+    neonFlick *= nd2 < 0.05 ? 0.7 : 1.0;            // occasional partial buzz
+    neonFlick = max(neonFlick, 0.0);
+
+    const vec3 NEON = vec3(0.16, 0.82, 0.95);        // brand blue-green
+
     // ── Scroll cue: polished banner laid onto the swell ──
     // The full-colour design is mapped into a perspective band (trapezoid + arc),
     // adding extra recline + bow on top of the design's own warp, rippling with the
@@ -300,7 +313,12 @@ const createFragmentShader = (lowQuality: boolean) => {
       vec2 warp = vec2(n.x, n.z) * 0.06;        // ripple on the water
       vec4 cue = texture2D(u_textTex, clamp(cueUV + warp, 0.0, 1.0));
       const float CUE_BRIGHT = 0.6;             // overall brightness (was too hot at 1.0)
-      vec3 cueCol = pow(cue.rgb, vec3(1.538)) * CUE_BRIGHT;  // cancel the final gamma, then dim
+      vec3 cueRaw = pow(cue.rgb, vec3(1.538));  // cancel the final gamma
+      // Tint onto the brand teal (matches the upright neon) and flicker in sync — it
+      // is the reflection of the same sign.
+      float cueLum = dot(cueRaw, vec3(0.299, 0.587, 0.114));
+      const float CUE_TINT = 0.82;
+      vec3 cueCol = mix(cueRaw, cueLum * vec3(0.18, 0.92, 1.0), CUE_TINT) * CUE_BRIGHT * neonFlick;
       // subtle grain only — blur/glow are already baked into the asset
       const float GRAIN = 0.10;
       float grain = hash(gl_FragCoord.xy * 1.3 + floor(iGlobalTime * 10.0));
@@ -333,14 +351,36 @@ const createFragmentShader = (lowQuality: boolean) => {
       float persp = mix(1.0 + R_TILT, 1.0 - R_TILT, clamp(tyLin, 0.0, 1.0));
       float tx = scm.x / (2.0 * R_WIDTH * persp) + 0.5;
 
+      // Flicker + brand teal are shared with the reflection (computed above).
+      float flick = neonFlick;
+      const float U_BRIGHT = 0.7;     // a touch brighter/more present than its reflection
+      float FADE = (1.0 - u_scrollProgress);
+
+      // --- Soft neon halo: a larger band sampling the pre-blurred glow texture ---
+      const float GP = 1.3;           // glow band scale = the glow texture's padding ratio
+      float gtyLin = (scm.y - yc) / (2.0 * R_HEIGHT * GP) + 0.5;
+      float gpersp = mix(1.0 + R_TILT, 1.0 - R_TILT, clamp(gtyLin, 0.0, 1.0));
+      float gtx = scm.x / (2.0 * R_WIDTH * GP * gpersp) + 0.5;
+      vec2 glowUV = vec2(gtx, gtyLin);
+      float inBoxG = step(0.0, glowUV.x) * step(glowUV.x, 1.0) * step(0.0, glowUV.y) * step(glowUV.y, 1.0);
+      float glowA = texture2D(u_textGlow, glowUV).a * inBoxG;
+      const float GLOW_STRENGTH = 0.45;
+      color += NEON * glowA * flick * GLOW_STRENGTH * FADE;
+
+      // --- Crisp letters over the halo ---
       vec2 upUV = vec2(tx, tyLin);
       float inBox = step(0.0, upUV.x) * step(upUV.x, 1.0) * step(0.0, upUV.y) * step(upUV.y, 1.0);
       vec4 up = texture2D(u_textTexUp, upUV);
-      const float U_BRIGHT = 0.7;     // a touch brighter/more present than its reflection
-      vec3 upCol = pow(up.rgb, vec3(1.538)) * U_BRIGHT;
+      vec3 upRaw = pow(up.rgb, vec3(1.538));
+      // Tint the baked PNG onto the brand blue-green (the album glow / ghost teal)
+      // so it coordinates with the pulse, cubes and backlight.
+      float upLum = dot(upRaw, vec3(0.299, 0.587, 0.114));
+      vec3 upTeal = upLum * vec3(0.18, 0.92, 1.0);
+      const float U_TINT = 0.82;       // 1.0 = fully teal monochrome, 0 = original asset
+      vec3 upCol = mix(upRaw, upTeal, U_TINT) * U_BRIGHT * flick;
       float grainU = hash(gl_FragCoord.xy * 1.3 + floor(iGlobalTime * 10.0));
       upCol *= 1.0 + (grainU - 0.5) * 0.10;
-      float au = up.a * inBox * (1.0 - u_scrollProgress);
+      float au = up.a * inBox * FADE;
       color = mix(color, upCol, clamp(au, 0.0, 1.0));
     }
 
@@ -400,6 +440,17 @@ export const WaterShader: React.FC<WaterShaderProps> = ({ scrollProgress = 0, lo
     return t;
   }, []);
 
+  // Pre-blurred, padded halo (1.6x canvas) for the neon glow — one cheap sample.
+  const upGlowTexture = useMemo(() => {
+    if (typeof document === 'undefined') return null;
+    const t = new THREE.TextureLoader().load('/scroll-up-glow.png');
+    t.minFilter = THREE.LinearFilter;
+    t.magFilter = THREE.LinearFilter;
+    t.wrapS = THREE.ClampToEdgeWrapping;
+    t.wrapT = THREE.ClampToEdgeWrapping;
+    return t;
+  }, []);
+
   const cueImgRef = useRef<HTMLImageElement | null>(null);
 
   // Paint the cropped banner design filling the canvas (the shader handles the tilt).
@@ -428,6 +479,7 @@ export const WaterShader: React.FC<WaterShaderProps> = ({ scrollProgress = 0, lo
       u_scrollProgress: { value: 0 },
       u_textTex: { value: textTexture },
       u_textTexUp: { value: upTexture },
+      u_textGlow: { value: upGlowTexture },
       u_deviceRes: { value: new THREE.Vector2(size.width, size.height) },
     }),
     []

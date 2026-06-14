@@ -44,6 +44,13 @@ const frostStyles = `
        the turbulence "swimming" and the jank when the card moves with the cursor. */
     will-change: transform;
     transform: translateZ(0);
+    /* Frost mounts after the entrance settles; grow it in (scale only — no opacity,
+       so the album never blinks) to mask the one-time filter rasterisation. */
+    animation: frostIn 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @keyframes frostIn {
+    from { transform: translateZ(0) scale(1.06); }
+    to   { transform: translateZ(0) scale(1); }
   }
   .frost-card-grid {
     position: absolute;

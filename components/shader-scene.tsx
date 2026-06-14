@@ -119,6 +119,10 @@ vec3 calcNormal(in vec3 p) {
   ));
 }
 
+float hash21(vec2 p) {
+  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
 void main() {
   vec2 centeredUV = (v_uv - 0.5) * vec2(u_aspect, 1.0);
   vec3 ray = normalize(vec3(centeredUV, -1.0));
@@ -151,27 +155,44 @@ void main() {
     float fresnel = pow(1.0 - max(dot(normal, viewDir), 0.0), 2.0);
     float hue = dot(normal, viewDir) * 3.14159 + u_time * 0.5;
     
+    // Brand blue-green (the section-1 album glow vec3(0.10,0.55,0.62)): green high,
+    // blue close to green (teal), not pegged at 1.0.
     vec3 blueShades = vec3(
-      sin(hue + 1.0) * 0.15 + 0.18,
-      sin(hue) * 0.25 + 0.6,
-      sin(hue) * 0.2 + 0.85
+      sin(hue + 1.0) * 0.12 + 0.12,
+      sin(hue) * 0.22 + 0.66,
+      sin(hue) * 0.18 + 0.74
     );
 
     vec3 iridescent = blueShades * fresnel * 1.2;
-    float rimLight = pow(1.0 - max(dot(normal, viewDir), 0.0), 3.0);
-    vec3 rimColor = vec3(0.3, 0.7, 1.0) * rimLight * 0.5;
+
+    // Harsh backlight: a tight, blown-out silhouette rim (was a soft teal halo).
+    float rimLight = pow(1.0 - max(dot(normal, viewDir), 0.0), 4.0);
     float ao = 1.0 - smoothstep(0.0, 0.3, totalDist / tMax);
 
-    vec3 baseColor = vec3(0.04, 0.1, 0.2);
-    color = baseColor * (0.1 + diff * 0.4) * ao;
-    color += iridescent * (0.8 + diff * 0.2);
-    color += vec3(0.85, 0.95, 1.0) * spec * 0.6;
-    color += rimColor;
-    
-    float fog = 1.0 - exp(-totalDist * 0.2);
-    color = mix(color, vec3(0.0), fog * 0.3);
+    // Darkish-blue cube body (reads blue, not black) with a faint blue sheen.
+    vec3 baseColor = vec3(0.06, 0.16, 0.34);
+    color = baseColor * (0.4 + diff * 0.3) * ao;
+    color += iridescent * 0.35;
+
+    // Bright saturated red light — diffuse glance, hot spec, harsh backlight rim.
+    vec3 redLight = vec3(1.0, 0.06, 0.05);
+    color += redLight * diff * 0.5;
+    color += redLight * spec * 1.4;
+    float rim = rimLight * 2.0;
+    color += redLight * rim;
+
+    // Thin cyan edge keeps the chromatic-aberration split alive on one side.
+    color += vec3(0.12, 0.7, 1.0) * rim * 0.35 * smoothstep(0.0, 0.5, -normal.x);
+
+    // Mild contrast — keep the blue body alive, let the red blow out.
+    color = max(color - 0.005, 0.0) * 1.1;
     alpha = 1.0;
   }
+
+  // Film grain over the frame — roughs up the polish to match the rest of the site.
+  float grain = hash21(gl_FragCoord.xy + u_time * 53.0) - 0.5;
+  color += grain * 0.10 * alpha;
+
   gl_FragColor = vec4(color, alpha);
 }
 `;
@@ -254,6 +275,7 @@ void main() {
 const createTextFragmentShader = (amount: number) => `
 varying vec3 vWorldPosition;
 uniform vec3 u_positions[${amount}];
+uniform float u_time;
 
 void main() {
   float minDistance = 1000.0;
@@ -264,10 +286,26 @@ void main() {
      minDistance = min(minDistance, d);
   }
   
-  float opacity = smoothstep(3.5, 1.5, minDistance);
-  opacity = max(0.15, opacity);
+  // Two separate falloffs: a wide one reveals the red text over a broad halo, and a
+  // tight one shifts only the dense centre of an intersection to the brand blue.
+  float proxOpacity = smoothstep(3.5, 1.2, minDistance); // wide red reveal
+  float proxBlue    = smoothstep(1.3, 0.35, minDistance); // tight blue core
 
-  gl_FragColor = vec4(0.27, 0.04, 0.04, opacity);
+  // Dark "black iridescence" (raven feather / labradorite) where the cubes pass:
+  // a near-black base shimmering through steel-blue and cool silver-grey, the channel
+  // phase offsets giving the hue shift, plus a sharp silver flash for the glint.
+  float t = dot(vWorldPosition.xy, vec2(0.12)) + u_time * 0.25 + minDistance * 0.5;
+  vec3 baseI = vec3(0.11, 0.15, 0.22);
+  vec3 irid = baseI + baseI * cos(6.2831 * (t + vec3(0.0, 0.06, 0.14)));
+  float flash = pow(0.5 + 0.5 * cos(6.2831 * t), 6.0);   // tight peaks
+  irid += vec3(0.16, 0.2, 0.26) * flash;                  // cool silver glint
+
+  vec3 redCol = vec3(0.55, 0.1, 0.1);   // brighter than the scene reds so it reads
+  vec3 col = mix(redCol, irid, proxBlue);
+
+  float opacity = max(0.38, proxOpacity);
+
+  gl_FragColor = vec4(col, opacity);
 }
 `;
 
@@ -279,14 +317,16 @@ const SceneText: FC<{ animationState: AnimationState; amount: number }> = ({ ani
   const uniforms = useMemo(
     () => ({
       u_positions: { value: animationState.positions },
+      u_time: { value: 0 },
     }),
     []
   );
 
   const fragmentShader = useMemo(() => createTextFragmentShader(amount), [amount]);
 
-  useFrame(() => {
+  useFrame((_, rawDelta) => {
     if (materialRef.current) {
+      materialRef.current.uniforms.u_time.value += Math.min(rawDelta, 0.1);
       for (let i = 0; i < amount; i++) {
         materialRef.current.uniforms.u_positions.value[i].copy(animationState.positions[i]);
       }
