@@ -173,7 +173,7 @@ const ShaderScene = dynamic(() => import('@/components/shader-scene'), { ssr: fa
 const WaterShader = dynamic(() => import('@/components/water-shader').then((mod) => ({ default: mod.WaterShader })), { ssr: false });
 const FluidOverlay = dynamic(() => import('@/components/fluid-overlay'), { ssr: false });
 
-const landingRecord = { artist: 'Isaac Rozsa', music: 'Prologue', albumArt: '/albums/new-eye-opens.png', audioSrc: '/audio/solemn9.mp3', isSong: true, plasticWrap: 1 as const, subjects: ['/subject.png', '/subject2.png'] as [string, string] };
+const landingRecord = { artist: 'Isaac Rozsa', music: 'Prologue', albumArt: '/albums/prologue.png', audioSrc: '/audio/solemn9.mp3', isSong: true, plasticWrap: 1 as const, subjects: ['/subject.png', '/subject2.png'] as [string, string] };
 const newEyeRecord = { artist: 'Isaac Rozsa', music: 'Dude Like Dust', albumArt: '/albums/dude-like-dust.png', audioSrc: '/audio/dude-like-dust.mp3', isSong: true, plasticWrap: 2 as const, subjects: ['/subject3.png', '/subject3.png'] as [string, string] };
 
 const socialLinks = [
@@ -279,6 +279,7 @@ export default function Home() {
   const [albumReady, setAlbumReady] = useState(false);
   const [copied, setCopied] = useState(false);
   const [fluidPulse, setFluidPulse] = useState(0);
+  const [frostReady, setFrostReady] = useState(false); // defer the heavy frost filter off the entrance
   const allReady = waterReady && albumReady;
   const canNavRef = useRef(true);
 
@@ -292,7 +293,15 @@ export default function Home() {
 
   const isMobile = useIsMobile();
   const reducedMotion = usePrefersReducedMotion();
-  const canvasDpr: [number, number] = isMobile ? [1, 1] : [1, 2];
+  const canvasDpr: [number, number] = isMobile ? [1, 1] : [1, 1.5];
+
+  // Mount the frost only after the entrance has settled, so its one-time SVG-filter
+  // rasterisation lands in a calm moment instead of hitching the reveal.
+  useEffect(() => {
+    if (!allReady) return;
+    const timer = setTimeout(() => setFrostReady(true), 700);
+    return () => clearTimeout(timer);
+  }, [allReady]);
 
   // Fallback: never get stuck on the loading screen
   useEffect(() => {
@@ -622,7 +631,7 @@ export default function Home() {
             {/* Tight, square-ish drop shadow so the frosted glass reads against
                 the bright water (instead of washing out). */}
             <div ref={landingAlbumWrapRef} style={{ transition: 'transform 0.3s ease-out', boxShadow: '0 0 48px 6px rgba(78, 200, 214, 0.42), 0 0 120px 30px rgba(40, 150, 170, 0.28)', willChange: 'transform' }}>
-              <MusicArtwork artist={landingRecord.artist} music={landingRecord.music} albumArt={landingRecord.albumArt} audioSrc={landingRecord.audioSrc} isSong={landingRecord.isSong} plasticWrap={landingRecord.plasticWrap} subjects={landingRecord.subjects} frosted={!isMobile} priority onImageReady={() => setAlbumReady(true)} />
+              <MusicArtwork artist={landingRecord.artist} music={landingRecord.music} albumArt={landingRecord.albumArt} audioSrc={landingRecord.audioSrc} isSong={landingRecord.isSong} plasticWrap={landingRecord.plasticWrap} subjects={landingRecord.subjects} frosted={!isMobile && frostReady} priority onImageReady={() => setAlbumReady(true)} />
             </div>
           </div>
         </div>
@@ -666,7 +675,7 @@ export default function Home() {
           <div className='relative'>
             <div className='relative z-50 scale-[0.85] sm:scale-90'>
               <div ref={albumWrapRef} style={{ transition: 'transform 0.3s ease-out', willChange: 'transform' }}>
-                <MusicArtwork artist={newEyeRecord.artist} music={newEyeRecord.music} albumArt={newEyeRecord.albumArt} audioSrc={newEyeRecord.audioSrc} isSong={newEyeRecord.isSong} plasticWrap={newEyeRecord.plasticWrap} subjects={newEyeRecord.subjects} frosted={!isMobile} />
+                <MusicArtwork artist={newEyeRecord.artist} music={newEyeRecord.music} albumArt={newEyeRecord.albumArt} audioSrc={newEyeRecord.audioSrc} isSong={newEyeRecord.isSong} plasticWrap={newEyeRecord.plasticWrap} subjects={newEyeRecord.subjects} frosted={!isMobile && frostReady} />
               </div>
             </div>
           </div>
