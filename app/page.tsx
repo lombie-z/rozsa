@@ -241,6 +241,15 @@ const EXIT_DURATION = 600;   // ms — outgoing page exit
 const ENTER_DURATION = 700;  // ms — incoming page enter
 const STAGGER_DELAY = 200;   // ms — delay before incoming starts (overlap with exit)
 
+// Bridges a record's playing state (from context, inside the provider) up to page
+// state so the water shader can gate the scroll cue on it.
+function PlayingWatch({ id, onChange }: { id: string; onChange: (playing: boolean) => void }) {
+  const { playingId } = usePlaying();
+  const playing = playingId === id;
+  useEffect(() => { onChange(playing); }, [playing, onChange]);
+  return null;
+}
+
 function VolumeControl() {
   const { volume, setVolume } = usePlaying();
   const [expanded, setExpanded] = useState(false);
@@ -302,6 +311,7 @@ export default function Home() {
   const [albumReady, setAlbumReady] = useState(false);
   const [copied, setCopied] = useState(false);
   const [fluidPulse, setFluidPulse] = useState(0);
+  const [landingPlaying, setLandingPlaying] = useState(false); // gate the scroll cue on playback
   const [frostReady, setFrostReady] = useState(false); // defer the heavy frost filter off the entrance
   const allReady = waterReady && albumReady;
   const canNavRef = useRef(true);
@@ -552,6 +562,7 @@ export default function Home() {
 
   return (
     <PlayingProvider>
+    <PlayingWatch id={`${landingRecord.artist}—${landingRecord.music}`} onChange={setLandingPlaying} />
     {/* Top-right controls */}
     <div className='fixed top-6 right-6 z-50 flex flex-col items-end gap-3'>
       <RoseNav activeIndex={currentPage} total={TOTAL_PAGES} onNavigate={goToPage} />
@@ -640,7 +651,7 @@ export default function Home() {
             setTimeout(() => setWaterReady(true), 200);
           }}
         >
-          <WaterShader scrollProgress={isLanding ? 0 : 1} lowQuality={isMobile} />
+          <WaterShader scrollProgress={isLanding ? 0 : 1} lowQuality={isMobile} showScroll={landingPlaying && isLanding} />
           <FpsCap run={isLanding || exitingPage === 0 || targetPage === 0} hz={30} />
         </Canvas>
       </div>
