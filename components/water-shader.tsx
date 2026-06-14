@@ -33,6 +33,7 @@ const createFragmentShader = (lowQuality: boolean) => {
   uniform vec2 iResolution;
   uniform float u_scrollProgress;
   uniform sampler2D u_textTex;
+  uniform sampler2D u_textTexUp;
   uniform vec2 u_deviceRes;
 
   const int NUM_STEPS = ${q.NUM_STEPS};
@@ -261,7 +262,7 @@ const createFragmentShader = (lowQuality: boolean) => {
       float gr = length(gd);
       float glow = exp(-gr * gr * 5.0);            // falloff (higher = tighter halo)
       color *= mix(0.04, 1.0, glow);               // vignette edges toward black
-      color += vec3(0.9, 0.5, 0.18) * glow * 0.30; // additive warm-gold light
+      color += vec3(0.10, 0.55, 0.62) * glow * 0.32; // additive cyan-teal light (matches the ghost)
     }
 
     // Apply darkening and depth effects based on scroll progress
@@ -273,20 +274,20 @@ const createFragmentShader = (lowQuality: boolean) => {
     float depthFog = 1.0 - exp(-dot(dist,dist) * (0.2 + u_scrollProgress * 0.3));
     color = mix(color, vec3(0.0, 0.0, 0.0), depthFog * (0.3 + u_scrollProgress * 0.4));
 
-    // ── Scroll cue: polished "Scroll" laid onto the swell ──
-    // The word's alpha is mapped into a perspective band (trapezoid + arc) so it
-    // reclines onto the water at the sea's angle under the album, warped by the
-    // live wave normal and tinted gold; fades out as we dive.
+    // ── Scroll cue: polished banner laid onto the swell ──
+    // The full-colour design is mapped into a perspective band (trapezoid + arc),
+    // adding extra recline + bow on top of the design's own warp, rippling with the
+    // live wave normal and compositing its own colours over the water; fades on dive.
     {
       float aspect = u_deviceRes.x / u_deviceRes.y;
       vec2 sc = gl_FragCoord.xy / u_deviceRes - 0.5; // dpr-correct, centred, +y up
       sc.x *= aspect;
 
-      const float T_CENTER_Y = -0.36; // vertical centre (low on the water, under the album)
-      const float T_WIDTH    = 0.72;  // half width
-      const float T_HEIGHT   = 0.15;  // half height (squashed -> reclined)
-      const float T_TILT     = 0.74;  // perspective: top edge narrower -> angled back
-      const float T_CURVE    = 0.30;  // arc: ends sweep up around the album
+      const float T_CENTER_Y = -0.37; // vertical centre (down in the foreground water strip)
+      const float T_WIDTH    = 0.52;  // half width
+      const float T_HEIGHT   = 0.09;  // half height (very flat -> fits the waterline→bottom gap)
+      const float T_TILT     = 0.85;  // perspective: strongly reclined onto the water
+      const float T_CURVE    = 0.0;   // no arc
 
       float hx = sc.x / T_WIDTH;
       float yc = T_CENTER_Y + T_CURVE * hx * hx;
@@ -296,11 +297,51 @@ const createFragmentShader = (lowQuality: boolean) => {
 
       vec2 cueUV = vec2(tx, tyLin);
       float inBox = step(0.0, cueUV.x) * step(cueUV.x, 1.0) * step(0.0, cueUV.y) * step(cueUV.y, 1.0);
-      vec2 warp = vec2(n.x, n.z) * 0.05;
-      float txt = texture2D(u_textTex, clamp(cueUV + warp, 0.0, 1.0)).a * inBox;
-      txt *= (1.0 - u_scrollProgress);
-      vec3 inkColor = vec3(0.88, 0.74, 0.46); // warm gold
-      color = mix(color, inkColor, clamp(txt, 0.0, 1.0) * 0.68);
+      vec2 warp = vec2(n.x, n.z) * 0.06;        // ripple on the water
+      vec4 cue = texture2D(u_textTex, clamp(cueUV + warp, 0.0, 1.0));
+      const float CUE_BRIGHT = 0.6;             // overall brightness (was too hot at 1.0)
+      vec3 cueCol = pow(cue.rgb, vec3(1.538)) * CUE_BRIGHT;  // cancel the final gamma, then dim
+      // subtle grain only — blur/glow are already baked into the asset
+      const float GRAIN = 0.10;
+      float grain = hash(gl_FragCoord.xy * 1.3 + floor(iGlobalTime * 10.0));
+      cueCol *= 1.0 + (grain - 0.5) * GRAIN;
+      float a = cue.a * inBox * (1.0 - u_scrollProgress);
+      color = mix(color, cueCol, clamp(a, 0.0, 1.0));
+    }
+
+    // Upright "Scroll" word standing above the waterline — the real text whose
+    // reflection lies on the water below. Built as a true mirror of the water band:
+    // identical width/tilt, y flipped about the waterline so it meets it at the seam.
+    {
+      float aspect = u_deviceRes.x / u_deviceRes.y;
+      vec2 sc = gl_FragCoord.xy / u_deviceRes - 0.5;
+      sc.x *= aspect;
+
+      // Same band params as the water reflection above.
+      const float R_CENTER_Y = -0.37;
+      const float R_WIDTH    = 0.52;
+      const float R_HEIGHT   = 0.09;
+      const float R_TILT     = 0.85;
+      const float WATERLINE  = R_CENTER_Y + R_HEIGHT; // top edge of the reflection (-0.28)
+      const float U_LIFT     = 0.0;   // nudge the source up off the seam (raise to separate)
+
+      vec2 scm = vec2(sc.x, 2.0 * WATERLINE - sc.y + U_LIFT); // reflect y about the waterline
+
+      float hx = scm.x / R_WIDTH;
+      float yc = R_CENTER_Y;
+      float tyLin = (scm.y - yc) / (2.0 * R_HEIGHT) + 0.5;
+      float persp = mix(1.0 + R_TILT, 1.0 - R_TILT, clamp(tyLin, 0.0, 1.0));
+      float tx = scm.x / (2.0 * R_WIDTH * persp) + 0.5;
+
+      vec2 upUV = vec2(tx, tyLin);
+      float inBox = step(0.0, upUV.x) * step(upUV.x, 1.0) * step(0.0, upUV.y) * step(upUV.y, 1.0);
+      vec4 up = texture2D(u_textTexUp, upUV);
+      const float U_BRIGHT = 0.7;     // a touch brighter/more present than its reflection
+      vec3 upCol = pow(up.rgb, vec3(1.538)) * U_BRIGHT;
+      float grainU = hash(gl_FragCoord.xy * 1.3 + floor(iGlobalTime * 10.0));
+      upCol *= 1.0 + (grainU - 0.5) * 0.10;
+      float au = up.a * inBox * (1.0 - u_scrollProgress);
+      color = mix(color, upCol, clamp(au, 0.0, 1.0));
     }
 
     // post
@@ -314,13 +355,14 @@ interface WaterShaderProps {
   lowQuality?: boolean;
 }
 
-// Canvas holding the polished "Scroll" word (single shape). The shader samples its
-// alpha and lays it into a perspective band on the water, tinted gold.
+// Canvas holding the polished "Scroll" banner (flattened raster with effects baked
+// in Affinity, cropped to content, aspect ~1.82). The shader lays it into a tilted
+// band on the water and shows its own colours.
 const TEXT_CANVAS_W = 2048;
-const TEXT_CANVAS_H = 640;
-// On-screen footprint of the word within the canvas (centred), aspect 320:114.
-const WORD_W = TEXT_CANVAS_W * 0.56;
-const WORD_H = WORD_W * (114 / 320);
+const TEXT_CANVAS_H = 1123;
+
+// Global animation speed for the water (waves + camera drift). < 1 = calmer/slower.
+const WATER_SPEED = 0.65;
 
 export const WaterShader: React.FC<WaterShaderProps> = ({ scrollProgress = 0, lowQuality = false }) => {
   const { size } = useThree();
@@ -347,26 +389,37 @@ export const WaterShader: React.FC<WaterShaderProps> = ({ scrollProgress = 0, lo
     return t;
   }, [textCanvas]);
 
-  const wordImgRef = useRef<HTMLImageElement | null>(null);
+  // Upright source word standing above the waterline (cropped PNG, loaded as-is).
+  const upTexture = useMemo(() => {
+    if (typeof document === 'undefined') return null;
+    const t = new THREE.TextureLoader().load('/scroll-up.png');
+    t.minFilter = THREE.LinearFilter;
+    t.magFilter = THREE.LinearFilter;
+    t.wrapS = THREE.ClampToEdgeWrapping;
+    t.wrapT = THREE.ClampToEdgeWrapping;
+    return t;
+  }, []);
 
-  // Paint the polished word centred in the canvas (the shader handles the tilt).
-  const drawWord = useCallback(() => {
+  const cueImgRef = useRef<HTMLImageElement | null>(null);
+
+  // Paint the cropped banner design filling the canvas (the shader handles the tilt).
+  const drawCue = useCallback(() => {
     if (!textCanvas || !textTexture) return;
     const ctx = textCanvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, TEXT_CANVAS_W, TEXT_CANVAS_H);
-    const img = wordImgRef.current;
-    if (img) ctx.drawImage(img, (TEXT_CANVAS_W - WORD_W) / 2, (TEXT_CANVAS_H - WORD_H) / 2, WORD_W, WORD_H);
+    const img = cueImgRef.current;
+    if (img) ctx.drawImage(img, 0, 0, TEXT_CANVAS_W, TEXT_CANVAS_H);
     textTexture.needsUpdate = true;
   }, [textCanvas, textTexture]);
 
-  // Load the polished "Scroll" SVG, then paint it into the texture.
+  // Load the polished banner (PNG with baked effects), then paint it into the texture.
   useEffect(() => {
     const img = new Image();
-    img.onload = () => { wordImgRef.current = img; drawWord(); };
-    img.src = '/scroll-word.svg';
+    img.onload = () => { cueImgRef.current = img; drawCue(); };
+    img.src = '/scroll-cue.png';
     return () => { img.onload = null; };
-  }, [drawWord]);
+  }, [drawCue]);
 
   const uniforms = useMemo(
     () => ({
@@ -374,6 +427,7 @@ export const WaterShader: React.FC<WaterShaderProps> = ({ scrollProgress = 0, lo
       iResolution: { value: new THREE.Vector2(size.width, size.height) },
       u_scrollProgress: { value: 0 },
       u_textTex: { value: textTexture },
+      u_textTexUp: { value: upTexture },
       u_deviceRes: { value: new THREE.Vector2(size.width, size.height) },
     }),
     []
@@ -392,7 +446,7 @@ export const WaterShader: React.FC<WaterShaderProps> = ({ scrollProgress = 0, lo
   useFrame((state, rawDelta) => {
     const delta = Math.min(rawDelta, 0.1);
     if (materialRef.current?.uniforms) {
-      timeRef.current += delta;
+      timeRef.current += delta * WATER_SPEED; // < 1 slows the whole scene (waves + drift)
       materialRef.current.uniforms.iGlobalTime.value = timeRef.current;
       materialRef.current.uniforms.u_scrollProgress.value = scrollProgress;
       // Update resolution to match actual canvas pixel size

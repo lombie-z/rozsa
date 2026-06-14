@@ -151,21 +151,21 @@ void main() {
     float fresnel = pow(1.0 - max(dot(normal, viewDir), 0.0), 2.0);
     float hue = dot(normal, viewDir) * 3.14159 + u_time * 0.5;
     
-    vec3 redShades = vec3(
-      sin(hue) * 0.3 + 0.7,
-      0.0,
-      sin(hue + 1.0) * 0.1
+    vec3 blueShades = vec3(
+      sin(hue + 1.0) * 0.15 + 0.18,
+      sin(hue) * 0.25 + 0.6,
+      sin(hue) * 0.2 + 0.85
     );
-    
-    vec3 iridescent = redShades * fresnel * 1.2;
+
+    vec3 iridescent = blueShades * fresnel * 1.2;
     float rimLight = pow(1.0 - max(dot(normal, viewDir), 0.0), 3.0);
-    vec3 rimColor = vec3(1.0, 0.2, 0.2) * rimLight * 0.5;
+    vec3 rimColor = vec3(0.3, 0.7, 1.0) * rimLight * 0.5;
     float ao = 1.0 - smoothstep(0.0, 0.3, totalDist / tMax);
-    
-    vec3 baseColor = vec3(0.2, 0.05, 0.05);
+
+    vec3 baseColor = vec3(0.04, 0.1, 0.2);
     color = baseColor * (0.1 + diff * 0.4) * ao;
     color += iridescent * (0.8 + diff * 0.2);
-    color += vec3(1.0, 0.9, 0.8) * spec * 0.6;
+    color += vec3(0.85, 0.95, 1.0) * spec * 0.6;
     color += rimColor;
     
     float fog = 1.0 - exp(-totalDist * 0.2);

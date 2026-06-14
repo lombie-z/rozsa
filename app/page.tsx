@@ -271,10 +271,14 @@ export default function Home() {
   const albumWrapRef = useRef<HTMLDivElement>(null);
   const landingAlbumWrapRef = useRef<HTMLDivElement>(null);
   const [currentPage, setCurrentPage] = useState(0);
+  // Destination of the in-flight navigation — used to pre-warm heavy shaders
+  // (start their render loop while still invisible, before the page is shown).
+  const [targetPage, setTargetPage] = useState(0);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [waterReady, setWaterReady] = useState(false);
   const [albumReady, setAlbumReady] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [fluidPulse, setFluidPulse] = useState(0);
   const allReady = waterReady && albumReady;
   const canNavRef = useRef(true);
 
@@ -306,6 +310,9 @@ export default function Home() {
     const clamped = Math.max(0, Math.min(TOTAL_PAGES - 1, index));
     if (clamped === currentPage || !canNavRef.current) return;
     canNavRef.current = false;
+
+    // Pre-warm the destination's heavy shaders right away (still invisible)
+    setTargetPage(clamped);
 
     // Clear any in-flight transition timers
     transitionTimers.current.forEach(clearTimeout);
@@ -414,9 +421,15 @@ export default function Home() {
     return () => { window.removeEventListener('mousemove', onMove); if (raf) cancelAnimationFrame(raf); };
   }, []);
 
+  // Ignite the fluid shader's radial pulse the instant we arrive on the New Eye
+  // screen — it sweeps out as the page fades in.
+  useEffect(() => {
+    if (currentPage === 1) setFluidPulse((k) => k + 1);
+  }, [currentPage]);
+
   // Derived state
   const isLanding = currentPage === 0;
-  const isNewEye = currentPage === 2;
+  const isNewEye = currentPage === 1;
 
   // Per-page enter offset: where the page starts when entering
   const getEnterOffset = (pageIndex: number, dir: 1 | -1): string => {
@@ -584,7 +597,7 @@ export default function Home() {
           gl={{ alpha: true, antialias: false, preserveDrawingBuffer: true }}
           style={{ width: '100%', height: '100%', display: 'block' }}
           dpr={canvasDpr}
-          frameloop={currentPage <= 1 ? 'always' : 'never'}
+          frameloop={(isLanding || exitingPage === 0 || targetPage === 0) ? 'always' : 'never'}
           onCreated={({ gl }) => {
             gl.domElement.style.pointerEvents = 'none';
             gl.domElement.style.touchAction = 'auto';
@@ -608,43 +621,43 @@ export default function Home() {
           <div className='relative z-50 scale-[0.85] sm:scale-90'>
             {/* Tight, square-ish drop shadow so the frosted glass reads against
                 the bright water (instead of washing out). */}
-            <div ref={landingAlbumWrapRef} style={{ transition: 'transform 0.3s ease-out', boxShadow: '0 0 48px 6px rgba(222, 168, 74, 0.45), 0 0 120px 30px rgba(196, 126, 46, 0.30)', willChange: 'transform' }}>
+            <div ref={landingAlbumWrapRef} style={{ transition: 'transform 0.3s ease-out', boxShadow: '0 0 48px 6px rgba(78, 200, 214, 0.42), 0 0 120px 30px rgba(40, 150, 170, 0.28)', willChange: 'transform' }}>
               <MusicArtwork artist={landingRecord.artist} music={landingRecord.music} albumArt={landingRecord.albumArt} audioSrc={landingRecord.audioSrc} isSong={landingRecord.isSong} plasticWrap={landingRecord.plasticWrap} subjects={landingRecord.subjects} frosted={!isMobile} priority onImageReady={() => setAlbumReady(true)} />
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── Page 1: ROZSA Shader Scene ── */}
+      {/* ── Page 2: ROZSA Shader Scene (swapped with New Eye) ── */}
       <section
         className='absolute inset-0 bg-black'
-        style={{
-          ...getPageStyle(1),
-          contain: 'layout style paint',
-        }}
-      >
-        <ShaderScene lowQuality={isMobile} active={currentPage === 1} />
-      </section>
-
-      {/* ── Page 2: New Eye (Ice Cube) ── */}
-      <section
-        className='absolute inset-0 bg-black flex items-center justify-center'
         style={{
           ...getPageStyle(2),
           contain: 'layout style paint',
         }}
       >
+        <ShaderScene lowQuality={isMobile} active={currentPage === 2} />
+      </section>
+
+      {/* ── Page 1: New Eye record (swapped with shader scene) ── */}
+      <section
+        className='absolute inset-0 bg-black flex items-center justify-center'
+        style={{
+          ...getPageStyle(1),
+          contain: 'layout style paint',
+        }}
+      >
         {/* Fluid overlay background */}
-        <div className='absolute inset-0 z-0 overflow-hidden transition-opacity duration-[3000ms]' style={{ opacity: isNewEye ? 1 : 0 }}>
+        <div className='absolute inset-0 z-0 overflow-hidden transition-opacity duration-[300ms]' style={{ opacity: isNewEye ? 1 : 0 }}>
           <Canvas
             orthographic
             camera={{ zoom: 1, position: [0, 0, 1], near: 0.1, far: 1000 }}
             gl={{ alpha: true, antialias: false }}
             style={{ width: '100%', height: '100%' }}
             dpr={[1, 1]}
-            frameloop={isNewEye ? 'always' : 'never'}
+            frameloop={(isNewEye || targetPage === 1) ? 'always' : 'never'}
           >
-            <FluidOverlay blue />
+            <FluidOverlay blue pulse={fluidPulse} />
           </Canvas>
         </div>
         <div className='absolute inset-x-0 top-0 h-2/5 bg-gradient-to-b from-black via-black/50 to-transparent pointer-events-none z-10' />
