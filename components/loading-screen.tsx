@@ -82,6 +82,22 @@ const LoadingScreen: FC<LoadingScreenProps> = ({ ready }) => {
           pointerEvents: 'none',
         }}
       />
+      {/* Big rose, up and to the right */}
+      <img
+        src="/rose-loading.png"
+        alt=""
+        style={{
+          position: 'absolute',
+          left: '63%',
+          top: '30%',
+          width: 'min(17vw, 20vh)',
+          transform: 'translate(-50%, -50%)',
+          opacity: phase === 'filling' ? 0.85 : 0,
+          transition: 'opacity 0.8s ease-out',
+          filter: 'drop-shadow(0 0 14px rgba(180, 40, 30, 0.45))',
+          pointerEvents: 'none',
+        }}
+      />
       <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox={`0 0 ${GLYPH_W} ${GLYPH_H}`}

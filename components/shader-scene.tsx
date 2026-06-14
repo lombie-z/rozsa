@@ -333,18 +333,98 @@ const SceneText: FC<{ animationState: AnimationState; amount: number }> = ({ ani
     }
   });
 
+  const fontSize = isSmall ? Math.min(1.6, viewport.width * 0.42) : 3.5;
+  const textProps = { fontSize, anchorX: 'center' as const, anchorY: 'middle' as const, letterSpacing: 0.1, font: '/fonts/UnifrakturMaguntia-Regular.ttf' };
+
   return (
-    <Text position={[0, 0, 2]} fontSize={isSmall ? Math.min(1.6, viewport.width * 0.42) : 3.5} anchorX='center' anchorY='middle' letterSpacing={0.1} font='/fonts/UnifrakturMaguntia-Regular.ttf'>
-      rozsa
-      <shaderMaterial
-        ref={materialRef}
-        uniforms={uniforms}
-        vertexShader={textVertexShader}
-        fragmentShader={fragmentShader}
-        transparent
-        blending={THREE.AdditiveBlending}
-      />
-    </Text>
+    <group>
+      {/* Black silhouette + outline behind the glyphs for contrast against the cubes. */}
+      <Text position={[0, 0, 1.99]} renderOrder={0} outlineWidth='6%' outlineBlur='10%' outlineColor='#000000' outlineOpacity={0.7} {...textProps}>
+        rozsa
+        <meshBasicMaterial color='#000000' toneMapped={false} transparent opacity={0.7} depthWrite={false} />
+      </Text>
+      <Text position={[0, 0, 2]} renderOrder={1} {...textProps}>
+        rozsa
+        <shaderMaterial
+          ref={materialRef}
+          uniforms={uniforms}
+          vertexShader={textVertexShader}
+          fragmentShader={fragmentShader}
+          transparent
+          blending={THREE.AdditiveBlending}
+        />
+      </Text>
+    </group>
+  );
+};
+
+// Rose bouquet sitting behind the text — completely transparent at rest, blooming
+// faintly only where the cubes pass over it (same proximity reveal as the text).
+const roseVertexShader = `
+varying vec3 vWorldPosition;
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  vec4 wp = modelMatrix * vec4(position, 1.0);
+  vWorldPosition = wp.xyz;
+  gl_Position = projectionMatrix * viewMatrix * wp;
+}
+`;
+
+const createRoseFragmentShader = (amount: number) => `
+varying vec3 vWorldPosition;
+varying vec2 vUv;
+uniform vec3 u_positions[${amount}];
+uniform sampler2D u_tex;
+
+void main() {
+  vec4 tex = texture2D(u_tex, vUv);
+  float minDistance = 1000.0;
+  for (int i = 0; i < ${amount}; i++) {
+    minDistance = min(minDistance, distance(vWorldPosition.xy, u_positions[i].xy));
+  }
+  float reveal = smoothstep(3.5, 1.0, minDistance);    // bloom in the cube's wake
+  // Roses are very dark red; additively blended, so lift them to read as a faint
+  // bloom (rather than darkening the scene into black gaps).
+  vec3 rose = tex.rgb * 2.6;
+  gl_FragColor = vec4(rose, tex.a * reveal * 0.26);    // transparent at rest, slight near cubes
+}
+`;
+
+const RoseBouquet: FC<{ animationState: AnimationState; amount: number }> = ({ animationState, amount }) => {
+  const materialRef = useRef<THREE.ShaderMaterial>(null!);
+
+  const texture = useMemo(() => {
+    const t = new THREE.TextureLoader().load('/bouquet.png');
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }, []);
+
+  const uniforms = useMemo(
+    () => ({
+      u_positions: { value: animationState.positions },
+      u_tex: { value: texture },
+    }),
+    [texture]
+  );
+
+  const fragmentShader = useMemo(() => createRoseFragmentShader(amount), [amount]);
+
+  useFrame(() => {
+    if (materialRef.current) {
+      for (let i = 0; i < amount; i++) {
+        materialRef.current.uniforms.u_positions.value[i].copy(animationState.positions[i]);
+      }
+    }
+  });
+
+  const H = 11;
+  const W = H * 0.656; // bouquet texture aspect
+  return (
+    <mesh position={[0, 0, 1]} renderOrder={-1}>
+      <planeGeometry args={[W, H]} />
+      <shaderMaterial ref={materialRef} uniforms={uniforms} vertexShader={roseVertexShader} fragmentShader={fragmentShader} transparent depthWrite={false} blending={THREE.AdditiveBlending} />
+    </mesh>
   );
 };
 
@@ -376,6 +456,7 @@ const Scene: FC<SceneProps> = ({ amount, maxSteps, precision, active = true }) =
   return (
     <>
       <ScreenPlane animationState={animationState} amount={amount} maxSteps={maxSteps} precision={precision} active={active} />
+      <RoseBouquet animationState={animationState} amount={amount} />
       <Suspense fallback={null}>
         <SceneText animationState={animationState} amount={amount} />
       </Suspense>
