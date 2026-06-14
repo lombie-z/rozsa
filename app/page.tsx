@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import MusicArtwork from '@/components/record';
@@ -11,6 +11,29 @@ import RoseNav from '@/components/rose-nav';
 import LoadingScreen from '@/components/loading-screen';
 import { useIsMobile, usePrefersReducedMotion } from '@/lib/use-mobile';
 import { PlayingProvider, usePlaying } from '@/lib/playing-context';
+
+// Caps a 'demand' Canvas to `hz` fps by invalidating at that rate while `run` is true
+// (and pauses entirely when false). Lets the slow liquid scenes render at 30 to halve
+// their GPU cost, while the loop pauses off-screen.
+function FpsCap({ run, hz = 30 }: { run: boolean; hz?: number }) {
+  const invalidate = useThree((s) => s.invalidate);
+  useEffect(() => {
+    if (!run) return;
+    let raf = 0;
+    let last = -Infinity;
+    const minInterval = 1000 / hz - 1.5; // tolerance so we land on ~30, not ~20, fps
+    const loop = (t: number) => {
+      raf = requestAnimationFrame(loop);
+      if (t - last >= minInterval) {
+        last = t;
+        invalidate();
+      }
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [run, hz, invalidate]);
+  return null;
+}
 
 function FlowerModel({ hovered }: { hovered: boolean }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -173,7 +196,7 @@ const ShaderScene = dynamic(() => import('@/components/shader-scene'), { ssr: fa
 const WaterShader = dynamic(() => import('@/components/water-shader').then((mod) => ({ default: mod.WaterShader })), { ssr: false });
 const FluidOverlay = dynamic(() => import('@/components/fluid-overlay'), { ssr: false });
 
-const landingRecord = { artist: 'Isaac Rozsa', music: 'Prologue', albumArt: '/albums/prologue.png', audioSrc: '/audio/solemn9.mp3', isSong: true, plasticWrap: 1 as const, subjects: ['/subject.png', '/subject2.png'] as [string, string] };
+const landingRecord = { artist: 'Isaac Rozsa', music: 'Prologue', albumArt: '/albums/prologue.png', audioSrc: '/audio/solemn10.mp3', isSong: true, plasticWrap: 1 as const, subjects: ['/subject.png', '/subject2.png'] as [string, string] };
 const newEyeRecord = { artist: 'Isaac Rozsa', music: 'Dude Like Dust', albumArt: '/albums/dude-like-dust.png', audioSrc: '/audio/dude-like-dust.mp3', isSong: true, plasticWrap: 2 as const, subjects: ['/subject3.png', '/subject3.png'] as [string, string] };
 
 const socialLinks = [
@@ -606,7 +629,7 @@ export default function Home() {
           gl={{ alpha: true, antialias: false, preserveDrawingBuffer: true }}
           style={{ width: '100%', height: '100%', display: 'block' }}
           dpr={canvasDpr}
-          frameloop={(isLanding || exitingPage === 0 || targetPage === 0) ? 'always' : 'never'}
+          frameloop={(isLanding || exitingPage === 0 || targetPage === 0) ? 'demand' : 'never'}
           onCreated={({ gl }) => {
             gl.domElement.style.pointerEvents = 'none';
             gl.domElement.style.touchAction = 'auto';
@@ -618,6 +641,7 @@ export default function Home() {
           }}
         >
           <WaterShader scrollProgress={isLanding ? 0 : 1} lowQuality={isMobile} />
+          <FpsCap run={isLanding || exitingPage === 0 || targetPage === 0} hz={30} />
         </Canvas>
       </div>
 
