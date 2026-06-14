@@ -1,6 +1,6 @@
 'use client';
 
-import { FC, useRef, useMemo } from 'react';
+import { FC, useRef, useMemo, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Plane } from '@react-three/drei';
 import * as THREE from 'three';
@@ -168,6 +168,7 @@ void main() {
 const fragmentShaderBlue = `
 uniform float u_time;
 uniform float u_aspect;
+uniform float u_pulse;
 varying vec2 vUv;
 
 vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -262,24 +263,55 @@ void main() {
 
   float alpha = shape * 0.35;
 
+  // One-shot radial ignition pulse radiating out from the album centre (eased, dim).
+  if (u_pulse >= 0.0 && u_pulse < 1.0) {
+    vec2 pp = vec2(vUv.x * u_aspect, vUv.y);
+    vec2 porigin = vec2(0.5 * u_aspect, 0.5);           // album centre
+    float pd = distance(pp, porigin);
+    float p = clamp(u_pulse, 0.0, 1.0);
+    float eased = 1.0 - pow(1.0 - p, 1.5);             // gentle ease-out: gradual decelerate
+    float waveR = eased * 1.6;                          // expands out past the screen
+    float dd = (pd - waveR) / 0.18;                     // constant tight band
+    float ring = exp(-dd * dd);
+    ring *= 1.0 - smoothstep(0.7, 1.0, p);             // dissipate near the end
+    // Brief core flash at the album as it ignites — the missing "kick".
+    float core = exp(-pd * pd * 9.0) * (1.0 - smoothstep(0.0, 0.35, p));
+    // Add clean cyan weighted by the fluid's structure — lights up the texture
+    // without amplifying its random red/cyan patches.
+    color += vec3(0.35, 0.82, 1.0) * ring * (0.45 + shape * 0.75);
+    color += vec3(0.45, 0.85, 1.0) * core * 0.7;
+    alpha = max(alpha, max(ring * (0.35 + shape * 0.4), core * 0.5));
+  }
+
   gl_FragColor = vec4(color, alpha);
 }
 `;
 
-const FluidPlane: FC<{ light?: boolean; blue?: boolean }> = ({ light = false, blue = false }) => {
+const FluidPlane: FC<{ light?: boolean; blue?: boolean; pulse?: number }> = ({ light = false, blue = false, pulse = 0 }) => {
   const { viewport, size } = useThree();
   const materialRef = useRef<THREE.ShaderMaterial>(null!);
+  const pulseStartRef = useRef(-100);
 
   const uniforms = useMemo(() => ({
     u_time: { value: 0 },
     u_aspect: { value: size.width / size.height },
+    u_pulse: { value: 999 },
   }), []);
+
+  // Ignite the radial wave from the current shader time whenever `pulse` changes.
+  useEffect(() => {
+    if (pulse > 0 && materialRef.current) {
+      pulseStartRef.current = materialRef.current.uniforms.u_time.value;
+    }
+  }, [pulse]);
 
   useFrame((state, rawDelta) => {
     const delta = Math.min(rawDelta, 0.1);
     if (materialRef.current) {
-      materialRef.current.uniforms.u_time.value += delta;
-      materialRef.current.uniforms.u_aspect.value = state.size.width / state.size.height;
+      const u = materialRef.current.uniforms;
+      u.u_time.value += delta;
+      u.u_aspect.value = state.size.width / state.size.height;
+      u.u_pulse.value = (u.u_time.value - pulseStartRef.current) / 3.2; // 0 -> 1 over ~3.2s
     }
   });
 
@@ -296,9 +328,9 @@ const FluidPlane: FC<{ light?: boolean; blue?: boolean }> = ({ light = false, bl
   );
 };
 
-export const FluidOverlay: FC<{ light?: boolean; blue?: boolean }> = ({ light = false, blue = false }) => {
+export const FluidOverlay: FC<{ light?: boolean; blue?: boolean; pulse?: number }> = ({ light = false, blue = false, pulse = 0 }) => {
   return (
-    <FluidPlane light={light} blue={blue} />
+    <FluidPlane light={light} blue={blue} pulse={pulse} />
   );
 };
 
