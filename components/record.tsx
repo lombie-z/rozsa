@@ -76,6 +76,13 @@ const frostStyles = `
     opacity: 1;
     transition-duration: 0s;
   }
+  /* Safari can't apply the chained CSS-filter + multiple url() pipeline above, so the
+     raw white dots show through plus-lighter as opaque circles on hover. Hide the grid
+     in Safari only (the base .frost-card frost still works) — graceful degradation.
+     -webkit-named-image() is a WebKit/Safari-only feature, so this targets Safari. */
+  @supports (background: -webkit-named-image(i)) {
+    .frost-card-grid { display: none; }
+  }
 `;
 
 export default function MusicArtwork({ artist, music, albumArt, isSong, plasticWrap, subjects, audioSrc, isLoading = false, priority = false, onImageReady, frosted = false }: MusicArtworkProps) {
