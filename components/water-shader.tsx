@@ -35,7 +35,8 @@ const createFragmentShader = (lowQuality: boolean) => {
   uniform sampler2D u_textTex;
   uniform sampler2D u_textTexUp;
   uniform sampler2D u_textGlow;
-  uniform float u_scrollVis;   // 1 on wide screens, 0 on narrow (hide the scroll cue)
+  uniform float u_scrollVis;   // 1 on wide screens, 0 on narrow (hide the scroll cue entirely)
+  uniform float u_scrollLit;   // 0 = neon switched off (dark tube), 1 = lit (glow + flicker)
   uniform vec2 u_deviceRes;
 
   const int NUM_STEPS = ${q.NUM_STEPS};
@@ -319,7 +320,11 @@ const createFragmentShader = (lowQuality: boolean) => {
       // is the reflection of the same sign.
       float cueLum = dot(cueRaw, vec3(0.299, 0.587, 0.114));
       const float CUE_TINT = 0.82;
-      vec3 cueCol = mix(cueRaw, cueLum * vec3(0.18, 0.92, 1.0), CUE_TINT) * CUE_BRIGHT * neonFlick;
+      // Same on/off behaviour as the upright sign: lit teal (flickering) when on,
+      // dark switched-off glass when off, at constant opacity either way.
+      vec3 cueLit = mix(cueRaw, cueLum * vec3(0.18, 0.92, 1.0), CUE_TINT) * CUE_BRIGHT * neonFlick;
+      vec3 cueUnlit = cueLum * vec3(0.16, 0.19, 0.22);
+      vec3 cueCol = mix(cueUnlit, cueLit, u_scrollLit);
       // subtle grain only — blur/glow are already baked into the asset
       const float GRAIN = 0.10;
       float grain = hash(gl_FragCoord.xy * 1.3 + floor(iGlobalTime * 10.0));
@@ -366,7 +371,7 @@ const createFragmentShader = (lowQuality: boolean) => {
       float inBoxG = step(0.0, glowUV.x) * step(glowUV.x, 1.0) * step(0.0, glowUV.y) * step(glowUV.y, 1.0);
       float glowA = texture2D(u_textGlow, glowUV).a * inBoxG;
       const float GLOW_STRENGTH = 0.45;
-      color += NEON * glowA * flick * GLOW_STRENGTH * FADE;
+      color += NEON * glowA * flick * GLOW_STRENGTH * FADE * u_scrollLit; // glow only when lit
 
       // --- Crisp letters over the halo ---
       vec2 upUV = vec2(tx, tyLin);
@@ -378,7 +383,9 @@ const createFragmentShader = (lowQuality: boolean) => {
       float upLum = dot(upRaw, vec3(0.299, 0.587, 0.114));
       vec3 upTeal = upLum * vec3(0.18, 0.92, 1.0);
       const float U_TINT = 0.82;       // 1.0 = fully teal monochrome, 0 = original asset
-      vec3 upCol = mix(upRaw, upTeal, U_TINT) * U_BRIGHT * flick;
+      vec3 litCol = mix(upRaw, upTeal, U_TINT) * U_BRIGHT * flick;   // lit teal neon, flickering
+      vec3 unlitCol = upLum * vec3(0.16, 0.19, 0.22);                // dark, switched-off glass tube
+      vec3 upCol = mix(unlitCol, litCol, u_scrollLit);
       float grainU = hash(gl_FragCoord.xy * 1.3 + floor(iGlobalTime * 10.0));
       upCol *= 1.0 + (grainU - 0.5) * 0.10;
       float au = up.a * inBox * FADE;
@@ -394,6 +401,7 @@ const createFragmentShader = (lowQuality: boolean) => {
 interface WaterShaderProps {
   scrollProgress?: number;
   lowQuality?: boolean;
+  showScroll?: boolean; // only reveal the scroll cue when the track is playing
 }
 
 // Canvas holding the polished "Scroll" banner (flattened raster with effects baked
@@ -405,7 +413,7 @@ const TEXT_CANVAS_H = 1123;
 // Global animation speed for the water (waves + camera drift). < 1 = calmer/slower.
 const WATER_SPEED = 0.65;
 
-export const WaterShader: React.FC<WaterShaderProps> = ({ scrollProgress = 0, lowQuality = false }) => {
+export const WaterShader: React.FC<WaterShaderProps> = ({ scrollProgress = 0, lowQuality = false, showScroll = false }) => {
   const { size } = useThree();
   const materialRef = useRef<THREE.ShaderMaterial>(null!);
   const timeRef = useRef(0);
@@ -482,6 +490,7 @@ export const WaterShader: React.FC<WaterShaderProps> = ({ scrollProgress = 0, lo
       u_textTexUp: { value: upTexture },
       u_textGlow: { value: upGlowTexture },
       u_scrollVis: { value: 1 },
+      u_scrollLit: { value: 0 },
       u_deviceRes: { value: new THREE.Vector2(size.width, size.height) },
     }),
     []
@@ -507,8 +516,12 @@ export const WaterShader: React.FC<WaterShaderProps> = ({ scrollProgress = 0, lo
       materialRef.current.uniforms.iResolution.value.set(state.size.width, state.size.height);
       // True drawing-buffer size (device px) for dpr-correct text placement
       materialRef.current.uniforms.u_deviceRes.value.set(state.gl.domElement.width, state.gl.domElement.height);
-      // Hide the scroll cue (neon sign + reflection) on narrow screens where it's too big to read.
-      materialRef.current.uniforms.u_scrollVis.value = state.size.width <= 1135 ? 0.0 : 1.0;
+      // Width hides the cue entirely on narrow screens; the "lit" amount eases the
+      // neon on/off with playback so it powers up when you hit play.
+      materialRef.current.uniforms.u_scrollVis.value = state.size.width > 1135 ? 1.0 : 0.0;
+      const litTarget = showScroll ? 1.0 : 0.0;
+      const litCur = materialRef.current.uniforms.u_scrollLit.value;
+      materialRef.current.uniforms.u_scrollLit.value = litCur + (litTarget - litCur) * Math.min(delta * 2.5, 1.0);
     }
   });
 
