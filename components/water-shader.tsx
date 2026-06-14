@@ -35,6 +35,7 @@ const createFragmentShader = (lowQuality: boolean) => {
   uniform sampler2D u_textTex;
   uniform sampler2D u_textTexUp;
   uniform sampler2D u_textGlow;
+  uniform float u_scrollVis;   // 1 on wide screens, 0 on narrow (hide the scroll cue)
   uniform vec2 u_deviceRes;
 
   const int NUM_STEPS = ${q.NUM_STEPS};
@@ -323,7 +324,7 @@ const createFragmentShader = (lowQuality: boolean) => {
       const float GRAIN = 0.10;
       float grain = hash(gl_FragCoord.xy * 1.3 + floor(iGlobalTime * 10.0));
       cueCol *= 1.0 + (grain - 0.5) * GRAIN;
-      float a = cue.a * inBox * (1.0 - u_scrollProgress);
+      float a = cue.a * inBox * (1.0 - u_scrollProgress) * u_scrollVis;
       color = mix(color, cueCol, clamp(a, 0.0, 1.0));
     }
 
@@ -354,7 +355,7 @@ const createFragmentShader = (lowQuality: boolean) => {
       // Flicker + brand teal are shared with the reflection (computed above).
       float flick = neonFlick;
       const float U_BRIGHT = 0.7;     // a touch brighter/more present than its reflection
-      float FADE = (1.0 - u_scrollProgress);
+      float FADE = (1.0 - u_scrollProgress) * u_scrollVis;
 
       // --- Soft neon halo: a larger band sampling the pre-blurred glow texture ---
       const float GP = 1.3;           // glow band scale = the glow texture's padding ratio
@@ -480,6 +481,7 @@ export const WaterShader: React.FC<WaterShaderProps> = ({ scrollProgress = 0, lo
       u_textTex: { value: textTexture },
       u_textTexUp: { value: upTexture },
       u_textGlow: { value: upGlowTexture },
+      u_scrollVis: { value: 1 },
       u_deviceRes: { value: new THREE.Vector2(size.width, size.height) },
     }),
     []
@@ -505,6 +507,8 @@ export const WaterShader: React.FC<WaterShaderProps> = ({ scrollProgress = 0, lo
       materialRef.current.uniforms.iResolution.value.set(state.size.width, state.size.height);
       // True drawing-buffer size (device px) for dpr-correct text placement
       materialRef.current.uniforms.u_deviceRes.value.set(state.gl.domElement.width, state.gl.domElement.height);
+      // Hide the scroll cue (neon sign + reflection) on narrow screens where it's too big to read.
+      materialRef.current.uniforms.u_scrollVis.value = state.size.width <= 1135 ? 0.0 : 1.0;
     }
   });
 
