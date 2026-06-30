@@ -1,0 +1,387 @@
+
+.album-arrhythmia {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #0000aa;
+  color: #fff;
+  font-family: system-ui, -apple-system, sans-serif;
+  position: fixed;
+  inset: 0;
+}
+
+.bsod-bars {
+  background: #0000aa;
+  position: relative;
+}
+
+.bsod-bars::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 0, 0, 0.15) 0px,
+      transparent 1px,
+      transparent 3px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      rgba(0, 255, 0, 0.15) 1px,
+      transparent 2px,
+      transparent 3px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 1px,
+      rgba(0, 100, 255, 0.15) 2px,
+      transparent 3px
+    );
+  background-size: 100% 3px;
+  animation: scanlines 2s linear infinite;
+  mix-blend-mode: screen;
+}
+
+.bsod-bars::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.08) 0px,
+    rgba(255, 255, 255, 0.08) 2px,
+    transparent 2px,
+    transparent 6px
+  );
+  background-size: 100% 6px;
+  animation: scanlines-slow 8s linear infinite;
+}
+
+@keyframes scanlines {
+  from { background-position: 0 0; }
+  to { background-position: 0 -90px; }
+}
+
+@keyframes scanlines-slow {
+  from { background-position: 0 0; }
+  to { background-position: 0 -60px; }
+}
+
+.crt-bulge {
+  overflow: hidden;
+  /* CRT barrel warp via SVG displacement map (experimental — re-rasterises the
+     animated screen each frame, so watch the framerate). */
+  filter: url(#crt-warp);
+}
+
+.crt-bulge > * {
+  transform: perspective(800px) rotateX(0deg) rotateY(0deg);
+}
+
+.crt-bulge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 998;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 80px rgba(0, 0, 0, 0.3),
+    inset 0 0 160px rgba(0, 0, 0, 0.15);
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 1px,
+      transparent 1px,
+      transparent 4px
+    ),
+    radial-gradient(
+      ellipse at center,
+      transparent 60%,
+      rgba(0, 0, 0, 0.12) 100%
+    );
+  background-size: 100% 4px, 100% 100%;
+  animation: screen-lines 6s linear infinite;
+  mask-image: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 0.08) 20%,
+    rgba(0, 0, 0, 0.08) 80%,
+    rgba(0, 0, 0, 1) 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 0.08) 20%,
+    rgba(0, 0, 0, 0.08) 80%,
+    rgba(0, 0, 0, 1) 100%
+  );
+}
+
+@keyframes screen-lines {
+  from { background-position: 0 0, center; }
+  to { background-position: 0 -120px, center; }
+}
+
+/* Static channel-change — a violent CRT channel-flick: the noise rolls and
+   squashes (broken vertical hold) with a brightness jolt, plus a white cut-flash.
+   linear timing keeps the roll mechanical/jittery rather than a smooth ease. */
+.channel-flick {
+  animation: channel-flick 0.3s linear;
+}
+
+@keyframes channel-flick {
+  0%   { transform: translateY(-16%) scaleY(1.1);  filter: brightness(2.6) contrast(1.3); }
+  16%  { transform: translateY(12%)  scaleY(0.88); filter: brightness(0.55); }
+  34%  { transform: translateY(-7%)  scaleY(1.05); filter: brightness(1.7); }
+  52%  { transform: translateY(5%)   scaleY(0.97); filter: brightness(0.85); }
+  70%  { transform: translateY(-3%)  scaleY(1.02); filter: brightness(1.25); }
+  86%  { transform: translateY(1.5%); filter: brightness(0.95); }
+  100% { transform: translateY(0)    scaleY(1);    filter: brightness(1); }
+}
+
+.channel-flash {
+  animation: channel-flash 0.14s ease-out forwards;
+}
+
+@keyframes channel-flash {
+  0%   { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+
+.carousel-spin {
+  animation: carousel 8s linear infinite;
+  transform-style: preserve-3d;
+}
+
+.marching-ants {
+  stroke-dasharray: 1 1;
+  animation: march 0.8s steps(2) infinite;
+}
+
+@keyframes march {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -2; }
+}
+
+.checkerboard {
+  background-image:
+    linear-gradient(45deg, #ccc 25%, transparent 25%),
+    linear-gradient(-45deg, #ccc 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #ccc 75%),
+    linear-gradient(-45deg, transparent 75%, #ccc 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  background-color: #fff;
+}
+
+@keyframes carousel {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(360deg); }
+}
+
+.bsod-flicker {
+  animation: flicker 0.1s steps(2) infinite;
+}
+
+@keyframes flicker {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes plasma-fadeout {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.ripple-line {
+  animation: ripple 2s linear infinite;
+  stroke-dasharray: 8 4;
+}
+
+@keyframes ripple {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+/* BSOD glitch effects */
+.bsod-ghost {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+  text-shadow: none;
+}
+
+.bsod-ghost-1 {
+  color: rgba(255, 0, 0, 0.5);
+  animation: bsod-ghost-anim-1 0.15s linear infinite;
+}
+
+.bsod-ghost-2 {
+  color: rgba(0, 255, 255, 0.5);
+  animation: bsod-ghost-anim-2 0.15s linear infinite;
+}
+
+@keyframes bsod-ghost-anim-1 {
+  0%, 14% { opacity: 0; transform: none; }
+  15%, 34% { opacity: 0.8; transform: translateX(-5px); }
+  35%, 54% { opacity: 0; transform: none; }
+  55%, 74% { opacity: 0.6; transform: translateX(-8px) scaleY(1.02); }
+  75%, 89% { opacity: 0; transform: none; }
+  90%, 100% { opacity: 0.7; transform: translateX(3px); }
+}
+
+@keyframes bsod-ghost-anim-2 {
+  0%, 9% { opacity: 0; transform: none; }
+  10%, 24% { opacity: 0.8; transform: translateX(5px); }
+  25%, 49% { opacity: 0; transform: none; }
+  50%, 69% { opacity: 0.6; transform: translateX(8px) scaleY(0.98); }
+  70%, 84% { opacity: 0; transform: none; }
+  85%, 100% { opacity: 0.7; transform: translateX(-3px); }
+}
+
+.bsod-burst {
+  animation: bsod-burst-anim 0.25s linear;
+}
+
+/* BSOD static noise warp in */
+.bsod-static-warp-in {
+  animation: bsod-static-in 0.6s ease-out forwards;
+}
+
+@keyframes bsod-static-in {
+  0% { transform: scaleY(0.01); opacity: 0; }
+  25% { transform: scaleY(0.01); opacity: 0.6; }
+  100% { transform: scaleY(1); opacity: 0.2; }
+}
+
+/* Pre-BSOD crash glitch */
+.bsod-preglitch {
+  animation: bsod-preglitch-escalate 0.8s ease-in forwards;
+}
+
+.bsod-preglitch-flash {
+  animation: bsod-preglitch-color 0.06s steps(4) infinite;
+}
+
+.bsod-preglitch-bars {
+  animation: bsod-preglitch-scan 0.08s steps(3) infinite;
+}
+
+.bsod-preglitch-white {
+  animation: bsod-preglitch-whiteout 0.8s ease-in forwards;
+}
+
+@keyframes bsod-preglitch-escalate {
+  0% { opacity: 0.1; }
+  40% { opacity: 0.35; }
+  70% { opacity: 0.65; }
+  90% { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+@keyframes bsod-preglitch-color {
+  0% { background: rgba(255, 0, 0, 0.1); }
+  25% { background: rgba(0, 255, 0, 0.12); }
+  50% { background: transparent; }
+  75% { background: rgba(0, 100, 255, 0.15); }
+}
+
+@keyframes bsod-preglitch-scan {
+  0% {
+    background: repeating-linear-gradient(0deg, transparent 0, transparent 30px, rgba(255,255,255,0.08) 30px, rgba(255,255,255,0.08) 33px);
+    transform: translateX(0);
+  }
+  33% {
+    background: repeating-linear-gradient(0deg, transparent 0, transparent 20px, rgba(255,255,255,0.12) 20px, rgba(255,255,255,0.12) 23px);
+    transform: translateX(8px);
+  }
+  66% {
+    background: repeating-linear-gradient(0deg, transparent 0, transparent 25px, rgba(255,255,255,0.06) 25px, rgba(255,255,255,0.06) 27px);
+    transform: translateX(-5px);
+  }
+}
+
+@keyframes bsod-preglitch-whiteout {
+  0%, 85% { background: transparent; }
+  95% { background: rgba(255, 255, 255, 0.4); }
+  100% { background: rgba(255, 255, 255, 0.9); }
+}
+
+/* Links page — final background fades in/out behind the persistent selection */
+.complete-bg-fadein {
+  animation: complete-bg-in 2s ease-in forwards;
+}
+.complete-bg-fadeout {
+  animation: complete-bg-out 1.5s ease-out forwards;
+}
+
+@keyframes complete-bg-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes complete-bg-out {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Player glitch entrance */
+.player-glitch-in {
+  animation: player-glitch-enter 0.5s steps(5) forwards;
+}
+
+@keyframes player-glitch-enter {
+  0% { opacity: 0; transform: translateX(12px); }
+  20% { opacity: 0.6; transform: translateX(-6px); filter: hue-rotate(90deg); }
+  40% { opacity: 0.2; transform: translateX(4px); }
+  60% { opacity: 0.8; transform: translateX(-3px) skewX(2deg); filter: hue-rotate(-40deg); }
+  80% { opacity: 0.5; transform: translateX(2px); }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+
+@keyframes scroll-hint-pulse {
+  0%, 100% { opacity: 0.5; transform: translateY(0); }
+  50% { opacity: 0.3; transform: translateY(4px); }
+}
+
+@keyframes ghost-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes progress-bar-glitch {
+  0%, 100% { height: 100%; opacity: 0.7; }
+  8% { height: 72%; opacity: 0.3; }
+  15% { height: 100%; opacity: 0.8; }
+  23% { height: 45%; opacity: 0.2; }
+  30% { height: 88%; opacity: 0.6; }
+  38% { height: 100%; opacity: 0.7; }
+  45% { height: 30%; opacity: 0.15; }
+  53% { height: 95%; opacity: 0.9; }
+  60% { height: 60%; opacity: 0.4; }
+  68% { height: 100%; opacity: 0.7; }
+  75% { height: 15%; opacity: 0.2; }
+  83% { height: 100%; opacity: 0.8; }
+  90% { height: 55%; opacity: 0.3; }
+}
+
+@keyframes bsod-burst-anim {
+  0%, 100% { transform: none; filter: none; }
+  14% { transform: translate(-5px, 2px) scaleY(1.04); filter: hue-rotate(90deg); }
+  28% { transform: translate(4px, -1px) skewX(1deg); filter: none; }
+  42% { transform: translate(-3px, 3px) scaleY(0.97); filter: hue-rotate(-60deg) brightness(1.3); }
+  56% { transform: translate(3px, -2px) skewX(-0.5deg); filter: none; }
+  70% { transform: translate(-2px, 1px) scaleY(1.02); }
+  84% { transform: translate(1px, -1px); filter: brightness(0.9); }
+}

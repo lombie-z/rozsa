@@ -1,0 +1,1 @@
+export const scrollState = { offset: 0, isPlaying: false, beatIntensity: 0, beatPulse: 0, rippleAges: [99,99,99,99,99,99,99,99,99,99,99,99] as number[], rippleIntensities: [1,1,1,1,1,1,1,1,1,1,1,1] as number[], rippleIdx: 0, sectionColor: [1.0, 0.84, 0.31] as number[], transitionBlur: 0.0, sceneReady: false }
