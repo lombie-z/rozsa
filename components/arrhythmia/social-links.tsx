@@ -91,9 +91,7 @@ export function SocialLinks({ visible }: { visible: boolean }) {
       <div className="flex gap-14 sm:gap-20 items-end">
         {/* Main site — red cube */}
         <a
-          href="https://isaacrozsa.com"
-          target="_blank"
-          rel="noopener noreferrer"
+          href="/"
           className="group flex flex-col items-center gap-3"
           style={{
             filter: "drop-shadow(0 0 0px transparent)",
@@ -118,9 +116,7 @@ export function SocialLinks({ visible }: { visible: boolean }) {
 
         {/* Good Talk — 3D rotating flower */}
         <a
-          href="https://goodtalk.isaacrozsa.com"
-          target="_blank"
-          rel="noopener noreferrer"
+          href="/good-talk"
           className="group flex flex-col items-center gap-3"
           onMouseEnter={() => setFlowerHovered(true)}
           onMouseLeave={() => setFlowerHovered(false)}
