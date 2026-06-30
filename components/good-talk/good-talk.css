@@ -1,0 +1,623 @@
+.album-good-talk {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.album-good-talk[style*="cursor: pointer"], .album-good-talk[style*="cursor: pointer"] * {
+  cursor: pointer !important;
+}
+
+.volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  border: none;
+  cursor: pointer;
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  border: none;
+  cursor: pointer;
+}
+
+.volume-slider::-moz-range-track {
+  background: rgba(255, 255, 255, 0.2);
+  height: 3px;
+  border-radius: 2px;
+}
+
+.bg-r-logo {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'UnifrakturMaguntia', serif;
+  font-size: clamp(30rem, 55vw, 50rem);
+  line-height: 0.75;
+  color: rgba(255, 255, 255, 0.04);
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+
+@font-face {
+  font-family: 'UnifrakturMaguntia';
+  src: url('/good-talk/fonts/UnifrakturMaguntia-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+.rozsa-end {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.rozsa-fur-card {
+  position: relative;
+  padding: 40px 60px;
+  overflow: hidden;
+  background: rgba(30, 20, 40, 0.8);
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+}
+
+.rozsa-fur-texture {
+  position: absolute;
+  inset: 0;
+  background-image: url('/good-talk/fur-texture.jpg');
+  background-size: cover;
+  background-position: center;
+  mix-blend-mode: screen;
+  opacity: 0.35;
+  z-index: 0;
+}
+
+.rozsa-title {
+  position: relative;
+  z-index: 1;
+  font-family: 'UnifrakturMaguntia', serif;
+  font-size: clamp(3rem, 12vw, 8rem);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  background: linear-gradient(
+    90deg,
+    #1a2d44,
+    #2d1a44,
+    #1a4444,
+    #44331a,
+    #1a2d44
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: iridescent 6s ease-in-out infinite;
+  margin: 0;
+  user-select: none;
+}
+
+.rozsa-socials {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.rozsa-social-link {
+  color: rgba(255, 255, 255, 0.35);
+  transition: color 0.2s ease, transform 0.15s ease;
+  text-decoration: none;
+  display: flex;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.rozsa-social-link:hover {
+  color: rgba(255, 255, 255, 0.8);
+  transform: scale(1.15);
+}
+
+.rozsa-social-link:active {
+  transform: scale(0.95);
+}
+
+.rozsa-cube-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  padding: 6px;
+  cursor: pointer;
+  transition: transform 0.2s ease, filter 0.2s ease;
+  filter: drop-shadow(0 2px 6px rgba(127, 29, 29, 0.4));
+}
+
+.rozsa-cube-link:hover {
+  transform: scale(1.2) rotate(5deg);
+  filter: drop-shadow(0 4px 16px rgba(127, 29, 29, 0.7));
+}
+
+.rozsa-cube-link:active {
+  transform: scale(0.95);
+}
+
+@keyframes beat-ripple {
+  0% { transform: scale(0); opacity: 0.7; }
+  100% { transform: scale(8); opacity: 0; }
+}
+
+
+@keyframes iridescent {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ── Music Player ────────────────────────────────────── */
+
+.mp-wrapper {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 50;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.mp-links-tray {
+  width: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  padding: 0 18px;
+  transition: max-height 0.3s ease, opacity 0.25s ease, padding 0.3s ease;
+}
+
+.mp-links-open {
+  max-height: 50px;
+  opacity: 1;
+  padding: 12px 18px;
+}
+
+.mp-link-icon {
+  color: rgba(255, 255, 255, 0.4);
+  display: flex;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.2s ease, transform 0.15s ease;
+}
+
+.mp-link-icon:hover {
+  color: rgba(255, 255, 255, 0.85);
+  transform: scale(1.15);
+}
+
+.mp-link-cube {
+  filter: drop-shadow(0 1px 4px rgba(127, 29, 29, 0.3));
+}
+
+.mp-link-cube:hover {
+  filter: drop-shadow(0 2px 8px rgba(127, 29, 29, 0.6));
+  color: unset;
+}
+
+.mp-links-tab {
+  width: 260px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  color: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  padding: 5px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  outline: none;
+  transition: color 0.2s ease, border-radius 0.3s ease;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.mp-links-tab:hover {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.mp-card {
+  width: 260px;
+  border-radius: 24px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: auto;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+
+
+/* ── Disc area (top of card) ──────────────────────────── */
+
+.mp-disc-area {
+  width: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: background 0.8s ease;
+  padding: 24px 18px 16px;
+  gap: 12px;
+}
+
+.mp-disc-wrap {
+  width: 100px;
+  height: 100px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.mp-disc {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #333 0%, #111 55%, #080808 100%);
+  position: relative;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  will-change: transform;
+}
+
+.mp-disc-groove {
+  position: absolute;
+  border-radius: 50%;
+  border: 0.5px solid rgba(255, 255, 255, 0.05);
+  pointer-events: none;
+}
+
+.mp-disc-groove-1 { inset: 15%; }
+.mp-disc-groove-2 { inset: 28%; }
+.mp-disc-groove-3 { inset: 40%; }
+
+.mp-disc-center {
+  position: absolute;
+  inset: 30%;
+  border-radius: 50%;
+  transition: background 0.6s ease;
+}
+
+.mp-disc-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: #1a1a1a;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* ── ScalesMixer ──────────────────────────────────────── */
+
+.mp-scales {
+  width: 100%;
+  height: 44px;
+  display: block;
+  opacity: 0.8;
+}
+
+/* ── Card body (below disc area) ─────────────────────── */
+
+.mp-body {
+  width: 100%;
+  padding: 0 18px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ── Track info ───────────────────────────────────────── */
+
+.mp-info {
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 32px;
+  justify-content: center;
+}
+
+.mp-title {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.mp-artist {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+/* ── Progress bar ─────────────────────────────────────── */
+
+.mp-progress-wrap {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mp-time {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  min-width: 28px;
+  user-select: none;
+}
+
+.mp-time:last-child {
+  text-align: right;
+}
+
+.mp-bar {
+  flex: 1;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  position: relative;
+  cursor: pointer;
+  overflow: visible;
+}
+
+.mp-bar:hover {
+  height: 5px;
+}
+
+.mp-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: background-color 0.6s ease;
+}
+
+.mp-bar-thumb {
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: white;
+  border: 1.5px solid;
+  opacity: 0;
+  transition: opacity 0.2s ease, border-color 0.6s ease;
+  pointer-events: none;
+}
+
+.mp-bar:hover .mp-bar-thumb {
+  opacity: 1;
+}
+
+/* ── Controls ─────────────────────────────────────────── */
+
+.mp-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.mp-ctrl {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.7);
+  outline: none;
+  padding: 0;
+  transition: color 0.2s ease, transform 0.1s ease;
+}
+
+.mp-ctrl:hover {
+  color: rgba(255, 255, 255, 1);
+}
+
+.mp-ctrl:active {
+  transform: scale(0.9);
+}
+
+.mp-ctrl-sm {
+  width: 28px;
+  height: 28px;
+}
+
+.mp-ctrl-play {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: white;
+  transition: border-color 0.6s ease, box-shadow 0.6s ease, background 0.2s ease, transform 0.1s ease;
+}
+
+.mp-ctrl-play:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: scale(1.08);
+}
+
+.mp-ctrl-play:active {
+  transform: scale(0.92);
+}
+
+/* ── Volume ───────────────────────────────────────────── */
+
+.mp-volume {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mp-vol-icon {
+  color: rgba(255, 255, 255, 0.35);
+  flex-shrink: 0;
+}
+
+.mp-vol-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.mp-vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.mp-vol-slider::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Mobile player ───────────────────────────────────── */
+
+.mp-mobile-wrap {
+  display: none;
+}
+
+.mp-mobile-container {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  z-index: 50;
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  overflow: hidden;
+  transition: left 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  color: white;
+}
+
+.mp-mobile-container.mp-mobile-collapsed {
+  left: calc(100vw - 220px);
+}
+
+.mp-mobile-container.mp-mobile-expanded {
+  left: 16px;
+}
+
+.mp-mobile-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  outline: none;
+  width: 100%;
+}
+
+.mp-mobile-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.4s ease 0.1s,
+              padding 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mp-mobile-body.mp-mobile-body-open {
+  max-height: 200px;
+  opacity: 1;
+  padding: 4px 16px 14px;
+}
+
+@keyframes mp-bar-bounce {
+  0% { height: 4px; }
+  100% { height: 14px; }
+}
+
+@media (max-width: 640px) {
+  .mp-desktop { display: none !important; }
+  .mp-mobile-wrap { display: block; }
+}

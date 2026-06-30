@@ -133,9 +133,7 @@ function SelectionLink() {
 
   return (
     <a
-      href="https://arrhythmia.isaacrozsa.com"
-      target="_blank"
-      rel="noopener noreferrer"
+      href="/arrhythmia"
       className="relative py-2 self-end"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -174,9 +172,7 @@ function FlowerLink() {
   const [hovered, setHovered] = useState(false);
   return (
     <a
-      href="https://goodtalk.isaacrozsa.com"
-      target="_blank"
-      rel="noopener noreferrer"
+      href="/good-talk"
       className="relative py-2 self-end"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
