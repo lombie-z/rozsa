@@ -25,22 +25,25 @@ const lato = Lato({
 });
 
 export const metadata: Metadata = {
-  title: "I. Rozsa",
-  description: "Isaac Rozsa. Sydney-based bedroom producer and composer. Check out my site 🉑.",
+  title: "Isaac Rozsa",
+  description: "Isaac Rozsa. Sydney-based bedroom producer and composer, just me and my synths. Singles Prologue, Dude Like Dust, and full albums Good Talk and Arrhythmia. Thanks for your time.",
   metadataBase: new URL("https://isaacrozsa.com"),
   icons: {
-    icon: '/favicon.svg',
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
   },
   openGraph: {
-    title: "I. Rozsa",
-    description: "Isaac Rozsa. Sydney-based bedroom producer and composer. Check out my site 🉑.",
+    title: "Isaac Rozsa",
+    description: "Isaac Rozsa. Sydney-based bedroom producer and composer, just me and my synths. Singles Prologue, Dude Like Dust, and full albums Good Talk and Arrhythmia. Thanks for your time.",
     type: "website",
     siteName: "I. Rozsa",
   },
   twitter: {
     card: "summary_large_image",
-    title: "I. Rozsa",
-    description: "Isaac Rozsa. Sydney-based bedroom producer and composer.",
+    title: "Isaac Rozsa",
+    description: "Isaac Rozsa. Sydney-based bedroom producer and composer, just me and my synths. Singles Prologue, Dude Like Dust, and full albums Good Talk and Arrhythmia.",
   },
 };
 
