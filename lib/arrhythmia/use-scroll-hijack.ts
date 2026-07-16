@@ -328,20 +328,6 @@ export function useScrollHijack() {
               dragProgress: 0,
             }));
             animatingRef.current = false;
-          } else if (selectionIndex === totalSelections - 1) {
-            // Last section — skip dissolve, go straight to complete
-            setTimeout(() => {
-              setState({
-                phase: "complete",
-                selectionIndex: selectionIndex + 1,
-                sectionProgress: 0,
-                drawnSegments: 0,
-                dragProgress: 0,
-                dragInProgress: 0,
-                bsodProgress: 0,
-              });
-              animatingRef.current = false;
-            }, 100);
           } else {
             setState((s) => ({ ...s, phase: "masking" }));
             setTimeout(() => {
