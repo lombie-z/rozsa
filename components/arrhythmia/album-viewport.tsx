@@ -371,8 +371,8 @@ export function AlbumViewport() {
   // actually landed on the new scene, so it never hides mid-transition; it's
   // self-resetting and torn down only on unmount, so it can't get "stuck". A
   // *layout* effect so the static is committed before the new scene can paint.
-  // masking/dissolving only occur on real scene transitions, so this stays clear
-  // of the drag, BSOD and links-page flows.
+  // masking/dissolving only occur on real scene transitions (including into the
+  // links page), so this stays clear of the drag and BSOD flows.
   const clearStatic = useCallback(() => {
     if (staticTimerRef.current) { clearTimeout(staticTimerRef.current); staticTimerRef.current = null; }
     setStaticBurst(false);
@@ -382,8 +382,8 @@ export function AlbumViewport() {
     const selChanged = selectionIndex !== prev;
     prevSelRef.current = selectionIndex;
 
-    // Never during the BSOD flow or the final links page.
-    if (phase === "bsod" || phase === "complete" || selectionIndex >= ALBUM_DATA.layers.length) {
+    // Never during the BSOD flow.
+    if (phase === "bsod") {
       clearStatic();
       return;
     }
