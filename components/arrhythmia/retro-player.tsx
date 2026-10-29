@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ALBUM_DATA } from "@/lib/arrhythmia/album-data";
+import { audioUrl } from "@/lib/audio-url";
 
 // 4-state volume: off -> low -> normal -> high. Index 2 (normal) is the default.
 const VOLUME_LEVELS = [0, 0.22, 0.5, 1.0];
@@ -120,9 +121,7 @@ export function RetroPlayer({
   const isLastSection = selectionIndex >= totalSections;
 
   const audioSrc = track
-    ? isHD
-      ? track.audioSrc
-      : track.audioSrc.replace("/hd/", "/lo/")
+    ? audioUrl(isHD ? track.audioSrc : track.audioSrc.replace("/hd/", "/lo/"))
     : null;
 
   const prevSrcRef = useRef<string | null>(null);

@@ -2,6 +2,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { scrollState } from '@/lib/good-talk/scrollState'
+import { audioIsRemote, audioUrl } from '@/lib/audio-url'
 
 const SONGS = [
   { src: '/good-talk/audio/out-is-through.mp3', title: 'Out is Through', color: '#E0E0E8', rgb: [0.88, 0.88, 0.91] },
@@ -212,7 +213,12 @@ export function MusicPlayer() {
     }
 
     audiosRef.current = SONGS.map(song => {
-      const audio = new Audio(song.src)
+      const audio = new Audio()
+      // crossOrigin must be set before src, and only when the audio really is
+      // remote: a bucket that answers with Access-Control-Allow-Origin is fine,
+      // but asking for CORS on a same-origin file in dev just adds a preflight.
+      if (audioIsRemote) audio.crossOrigin = 'anonymous'
+      audio.src = audioUrl(song.src)
       audio.loop = false
       audio.preload = 'auto'
       const source = ctx.createMediaElementSource(audio)

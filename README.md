@@ -102,6 +102,31 @@ To get help with any TinaCMS challenges you may have:
 A good way to ensure your components match the shape of your data is to leverage the auto-generated TypeScript types.
 These are rebuilt when your `tina` config changes.
 
+## Audio hosting
+
+The album mp3s are served from a Cloudflare R2 bucket instead of `public/`, so
+streaming them doesn't consume the Vercel data-transfer allowance. Track data
+stores root-relative paths; `lib/audio-url.ts` prefixes them with
+`NEXT_PUBLIC_AUDIO_BASE_URL` at playback time. With the variable unset the paths
+stay relative and the files play out of `public/`, which is the local default.
+
+One-off setup:
+
+1. Create the bucket: `npx wrangler r2 bucket create rozsa-audio`
+2. Upload: `./scripts/upload-audio.sh rozsa-audio` (bucket keys mirror the paths
+   under `public/`)
+3. Apply CORS: `npx wrangler r2 bucket cors set rozsa-audio --file scripts/r2-cors.json`.
+   The Good Talk player runs the audio through an `AnalyserNode`, and
+   `createMediaElementSource` silently reads back zeroes on a cross-origin
+   stream without the CORS headers — the music plays but the visuals flatline.
+4. In the Cloudflare dashboard, attach `audio.isaacrozsa.com` to the bucket under
+   **R2 > the bucket > Settings > Custom Domains**. Use a custom domain, not the
+   `r2.dev` URL, which Cloudflare rate-limits and documents as development-only.
+5. Set `NEXT_PUBLIC_AUDIO_BASE_URL=https://audio.isaacrozsa.com` in the Vercel
+   project (all environments) and redeploy.
+
+Once the bucket is serving, the mp3s can come out of `public/`.
+
 ## LICENSE
 
 Licensed under the [Apache 2.0 license](./LICENSE).

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { usePlaying } from '@/lib/playing-context';
+import { audioUrl } from '@/lib/audio-url';
 
 // Component-specific styles
 const componentStyles = `
@@ -122,7 +123,7 @@ export default function MusicArtwork({ artist, music, albumArt, isSong, plasticW
 
   useEffect(() => {
     if (!audioSrc) return;
-    const audio = new Audio(audioSrc);
+    const audio = new Audio(audioUrl(audioSrc));
     audio.preload = 'none';
     audioRef.current = audio;
     const handleEnded = () => {
